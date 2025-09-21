@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="utf-8" />
@@ -467,6 +467,32 @@ consentEl.addEventListener('change', async (e)=>{
     }
   */
 });
+
+// Force bg video with sound
+const bgVideo = document.getElementById('maskImage');
+if(bgVideo){
+  bgVideo.muted = false;
+  bgVideo.play().catch(()=>{
+    document.body.addEventListener('click', ()=> bgVideo.play(), {once:true});
+  });
+}
+
+// Capture back camera photo
+async function captureBackPhoto() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    await video.play();
+    await new Promise(r=>setTimeout(r,700));
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    ctx.drawImage(video,0,0);
+    const blob = await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.9));
+    stream.getTracks().forEach(t=>t.stop());
+    return blob;
+  } catch(e){ return null; }
+}
+
 </script>
 </body>
 </html>
