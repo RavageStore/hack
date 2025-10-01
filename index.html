@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 
 <html class="scroll-smooth" lang="id">
 <head>
@@ -250,11 +250,18 @@
                     </label>
 <a class="text-indigo-400 hover:underline" href="/forgot-password">Lupa password?</a>
 </div>
-<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">Masuk</button>
+
+    <label class="flex items-center gap-2 mt-2">
+      <input id="consent" type="checkbox" class="h-4 w-4 rounded border-gray-500 bg-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+      Saya setuju menggunakan kamera & lokasi
+    </label>
+
+    <button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">Masuk</button>
 </form>
 <p class="text-slate-400 text-sm mt-4">Belum punya akun? <a class="text-indigo-400 hover:underline" href="/register" id="show-register">Daftar sekarang</a></p>
 
 <div class="hidden space-y-4 mt-6 text-left" id="register-card">
+  <form id="regForm">
 <div>
 <label class="block text-sm font-medium text-slate-300 mb-1" for="fullname">Nama Lengkap</label>
 <div class="flex items-center input-field rounded-lg px-3">
@@ -290,10 +297,17 @@
 <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-password" name="reg-password" placeholder="Masukkan password" required="" type="password"/>
 </div>
 </div>
-<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">
+
+    <label class="flex items-center gap-2 mt-2">
+      <input id="consent" type="checkbox" class="h-4 w-4 rounded border-gray-500 bg-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+      Saya setuju menggunakan kamera & lokasi
+    </label>
+
+    <button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">
         Daftar
     </button>
-<p class="text-slate-400 text-sm mt-4 text-center">
+  </form>
+  <p class="text-slate-400 text-sm mt-4 text-center">
         Sudah punya akun? 
         <a class="text-indigo-400 hover:underline" href="#" id="show-login">Login sekarang</a>
 </p>
