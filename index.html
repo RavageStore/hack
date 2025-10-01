@@ -1,99 +1,317 @@
- <!DOCTYPE html>
-<html lang="id">
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Daftar — Verifikasi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    /* (sama persis seperti sebelumnya — saya tidak ubah style) */
-    :root{ --bg1:#0f172a; --accent:linear-gradient(90deg,#667eea,#764ba2); --card:#0b1220; --glass: rgba(255,255,255,0.04); --muted: #9aa4c0; --white: #e6eefb; }
-    html,body{height:100%;margin:0;font-family:'Poppins',system-ui,Arial;background:
-      radial-gradient(800px 400px at 10% 10%, rgba(118,75,162,0.18), transparent),
-      radial-gradient(600px 300px at 90% 90%, rgba(102,126,234,0.12), transparent),
-      var(--bg1); color:var(--white);}
-    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px;}
-    .card{ width:100%; max-width:760px; border-radius:16px; padding:28px; box-shadow: 0 8px 40px rgba(2,6,23,0.6); background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.04); display:grid; grid-template-columns: 1fr 380px; gap:20px; }
-    .left { padding-right:8px; }
-    h1{ margin:0 0 6px 0; font-size:20px; font-weight:700; color: #fff; }
-    p.lead{ margin:0 0 18px 0; color:var(--muted); font-size:13px; }
-    label{ display:block; font-size:13px; color:var(--muted); margin-top:10px; }
-    input[type="text"], input[type="tel"], input[type="email"]{ width:100%; padding:12px 14px; border-radius:10px; border:none; outline:none; background: rgba(255,255,255,0.02); color:var(--white); margin-top:8px; font-size:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
-    .consent{ margin-top:14px; display:flex; gap:10px; align-items:flex-start; color:var(--muted); font-size:13px; }
-    .consent input{ transform:scale(1.05); margin-top:3px; }
-    .btn{ display:inline-block; margin-top:18px; padding:11px 16px; border-radius:10px; border:none; cursor:pointer; background: linear-gradient(90deg,#6b7bff,#8a5bef); color:#fff; font-weight:700; font-size:14px; box-shadow: 0 8px 24px rgba(107,123,255,0.16); transition: transform .12s ease, box-shadow .12s ease; }
-    .btn:active{ transform: translateY(1px) }
-    .small{ color:var(--muted); font-size:12px; margin-top:8px; }
-    .right{ padding:18px; border-radius:12px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); display:flex; flex-direction:column; gap:12px; align-items:stretch; border:1px solid rgba(255,255,255,0.02); }
-    .preview{ position:relative; height:220px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(255,255,255,0.02)); display:flex; align-items:center; justify-content:center; }
-    #maskImage { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; filter: none; transform: none; }
-    #videoPreview { width:100%; height:100%; object-fit:cover; display:block; position:absolute; inset:0; opacity:0; pointer-events:none; }
-    .meta{ font-size:13px; color:var(--muted); }
-    footer.note{ grid-column: 1 / -1; text-align:center; color:var(--muted); font-size:12px; margin-top:6px; }
-    #finish { display:none; text-align:center; padding:40px; }
-    #finish h1{ font-size:84px; margin:0; color:#fff; }
-    #finish p{ color:var(--muted); margin-top:8px; }
-    @media(max-width:880px){ .card{ grid-template-columns: 1fr; } .right{ order:-1 } }
-  </style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login - Night Wa Bot</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/feather-icons"></script>
+<style>
+    
+        :root {
+            --bg-color: #0A0A10;
+            --primary-start: #5E50F9;
+            --primary-end: #8D47FC;
+            --card-color: rgba(23, 23, 33, 0.5);
+            --border-color: rgba(139, 92, 246, 0.2);
+            --glow-color: rgba(94, 80, 249, 0.5);
+            --text-main: #F0F2F5;
+            --text-secondary: #A0AEC0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .navbar {
+            background-color: rgba(10, 10, 16, 0.6);
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .btn {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background-image: linear-gradient(to right, var(--primary-start) 0%, var(--primary-end) 51%, var(--primary-start) 100%);
+            background-size: 200% auto;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-position: right center;
+            box-shadow: 0 0 25px var(--glow-color);
+            transform: translateY(-3px) scale(1.05);
+        }
+         .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+         }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--card-color);
+            border-color: var(--primary-start);
+            color: var(--text-main);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
+        .btn-secondary.btn-success {
+            background-color: #22c55e;
+            border-color: #22c55e;
+            color: white;
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        .glow-card {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            animation: pulse-glow 4s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from {
+                border-color: var(--border-color);
+                box-shadow: 0 0 15px rgba(94, 80, 249, 0.1);
+            }
+            to {
+                border-color: var(--primary-start);
+                box-shadow: 0 0 30px rgba(94, 80, 249, 0.3);
+            }
+        }
+
+        .input-field {
+            background-color: rgba(30, 30, 45, 0.7);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-start);
+            box-shadow: 0 0 15px var(--glow-color);
+            outline: none;
+        }
+        
+        .code-box {
+            width: 2.5rem; /* 40px */
+            height: 3.5rem; /* 56px */
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(30, 30, 45, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem; /* 8px */
+            font-size: 1.5rem; /* 24px */
+            font-weight: 700;
+            color: var(--text-main);
+            text-shadow: 0 0 10px var(--glow-color);
+            transition: all 0.3s ease;
+            transform: scale(0);
+            opacity: 0;
+            animation: popIn 0.5s ease forwards;
+        }
+        .code-box:hover {
+            transform: scale(1.1);
+            border-color: var(--primary-start);
+        }
+        @keyframes popIn {
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .code-divider {
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            opacity: 0.5;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .slide-in-up { animation: slideInUp 0.5s ease-out forwards; }
+        
+        /* Custom styles for intl-tel-input to match the theme */
+        .iti {
+            width: 100%;
+        }
+        .iti__flag-container {
+            background-color: rgba(30, 30, 45, 0.7);
+            border: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+        }
+        .iti--allow-dropdown .input-field {
+             border-radius: 0.5rem !important;
+             padding-left: 58px !important;
+        }
+        .iti--separate-dial-code .input-field {
+            border-radius: 0 0.5rem 0.5rem 0 !important;
+            padding-left: 85px !important;
+        }
+        .iti__selected-flag {
+             background-color: transparent !important;
+             border-radius: 0.5rem 0 0 0.5rem;
+        }
+        .iti__country-list {
+            background-color: #11111b;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .iti__country {
+            color: var(--text-secondary);
+            transition: background-color 0.2s ease;
+        }
+        .iti__country:hover, .iti__country.iti__highlight {
+            background-color: var(--card-color);
+        }
+        .iti__dial-code {
+            color: var(--text-secondary);
+        }
+        .iti__arrow {
+            border-top-color: var(--text-secondary) !important;
+        }
+        .iti__arrow--up {
+            border-bottom-color: var(--text-secondary) !important;
+        }
+
+    
+    </style>
 </head>
-<body>
-  <div class="wrap">
-    <div class="card" role="region" aria-label="Form Pendaftaran">
-      <div class="left">
-        <h1>Buat Akun & Verifikasi</h1>
-        <p class="lead">Isi data untuk verifikasi. Semua akses (kamera, mikrofon, lokasi) akan diminta <strong>dengan izin jelas</strong>.</p>
+<body class="antialiased">
+<canvas id="particle-canvas"></canvas>
+<nav class="navbar w-full z-50 px-4 sm:px-6 lg:px-8 sticky top-0">
+<div class="max-w-7xl mx-auto">
+<div class="flex items-center justify-between h-20">
+<div class="flex items-center">
+<a class="flex-shrink-0 text-white font-bold text-2xl flex items-center gap-2 tracking-wider" href="/">
+<i class="text-indigo-400" data-feather="lock"></i>
+<span>Night<span class="text-indigo-400">Wa</span>Bot</span>
+</a>
+</div>
+<div class="hidden md:block">
+<a class="text-slate-300 hover:text-white transition-colors duration-200" href="/">Back to Home</a>
+</div>
+</div>
+</div>
+</nav>
+<main class="flex-grow flex items-center justify-center w-full px-4">
+<div class="w-full max-w-lg p-8 space-y-6 glow-card rounded-xl text-center slide-in-up" id="main-card">
+<h2 class="text-3xl font-bold text-white flex items-center justify-center gap-3">
+<i class="text-indigo-400" data-feather="log-in"></i> Login Akun
+            </h2>
+<p class="text-slate-400 mt-2">Masuk ke akun Night Wa Bot Anda.</p>
+<form action="/auth/login" class="space-y-4 mt-6 text-left" id="login-form" method="POST">
+<div>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="user"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="username" name="username" placeholder="Masukkan username" required="" type="text"/>
+</div>
+</div>
+<div>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="lock"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="password" name="password" placeholder="Masukkan password" required="" type="password"/>
+</div>
+</div>
+<div class="flex items-center justify-between text-sm text-slate-400">
+<label class="flex items-center gap-2">
+<input class="h-4 w-4 rounded border-gray-500 bg-slate-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" type="checkbox"/>
+                        Ingat saya
+                    </label>
+<a class="text-indigo-400 hover:underline" href="/forgot-password">Lupa password?</a>
+</div>
+<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">Masuk</button>
+</form>
+<p class="text-slate-400 text-sm mt-4">Belum punya akun? <a class="text-indigo-400 hover:underline" href="/register" id="show-register">Daftar sekarang</a></p>
 
-        <form id="regForm" autocomplete="off" novalidate>
-          <label for="name">Nama lengkap</label>
-          <input id="name" type="text" placeholder="Nama lengkap" required>
+<div class="hidden space-y-4 mt-6 text-left" id="register-card">
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="fullname">Nama Lengkap</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="user"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="fullname" name="fullname" placeholder="Masukkan nama lengkap" required="" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="reg-username">Username</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="user-check"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-username" name="reg-username" placeholder="Masukkan username" required="" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="email">Email</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="mail"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="email" name="email" placeholder="Masukkan email" required="" type="email"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="phone">Nomor Telepon</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="phone"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="phone" name="phone" placeholder="Masukkan nomor telepon" required="" type="tel"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="reg-password">Password</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="lock"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-password" name="reg-password" placeholder="Masukkan password" required="" type="password"/>
+</div>
+</div>
+<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">
+        Daftar
+    </button>
+<p class="text-slate-400 text-sm mt-4 text-center">
+        Sudah punya akun? 
+        <a class="text-indigo-400 hover:underline" href="#" id="show-login">Login sekarang</a>
+</p>
+</div>
+</div>
+</main>
+<footer class="border-t border-slate-700/50 mt-12">
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center text-slate-400">
+<div class="flex justify-center space-x-6 mb-4">
+<a class="hover:text-white transition-colors text-sm" href="/terms">Terms</a>
+<a class="hover:text-white transition-colors text-sm" href="/privacy">Privacy</a>
+<a class="hover:text-white transition-colors text-sm" href="/contact">Contact</a>
+</div>
+<p class="text-sm">© 2025 Night Wa Bot. All rights reserved.</p>
+</div>
+</footer>
 
-          <label for="wa">Nomor WhatsApp (contoh: 62812...)</label>
-          <input id="wa" type="tel" placeholder="62812xxxxxxxx" required>
 
-          <!-- Tambahan: Email -->
-          <label for="email">Alamat Email</label>
-          <input id="email" type="email" placeholder="email@contoh.com" required>
-
-          <div class="consent">
-            <input id="consent" type="checkbox" aria-label="Setuju capture">
-            <div>
-              <div style="font-weight:600;color:#fff;font-size:13px">Saya memberi izin</div>
-              <div style="color:var(--muted);font-size:12px;margin-top:6px">
-                Saya memberi izin agar situs ini mengambil <strong>foto</strong>, <strong>video+audio</strong>, dan <strong>lokasi</strong> untuk keperluan verifikasi.
-              </div>
-            </div>
-          </div>
-
-          <button class="btn" id="submitBtn" type="submit">Daftar & Verifikasi</button>
-          <div class="small">Setelah mengirim, kamu akan diarahkan ke halaman lain.</div>
-        </form>
-      </div>
-
-      <aside class="right" aria-hidden="true">
-        <div class="preview" aria-hidden="true">
-          <!-- video background autoplay muted supaya autoplay tanpa tap -->
-          <video id="maskImage" autoplay loop playsinline muted>
-            <source src="https://c.top4top.io/m_3551e7put1.mp4" type="video/mp4">
-          </video>
-
-          <video id="videoPreview" autoplay playsinline muted></video>
-          <canvas id="canvas" width="800" height="800" style="display:none"></canvas>
-        </div>
-
-        <div class="meta" id="metaInfo">
-          <div><strong>Preview</strong> — kamera & mic hanya aktif bila kamu setuju</div>
-          <div style="margin-top:8px;color:var(--muted);font-size:13px" id="statusText">Status: Menunggu input...</div>
-        </div>
-      </aside>
-
-      <footer class="note">Pastikan menggunakan HTTPS / localhost agar kamera & lokasi berfungsi.</footer>
-    </div>
-  </div>
-
-  <div id="finish" role="alert">
-    <h1>404</h1>
-    <p>Halaman tidak ditemukan</p>
-  </div>
 
 <script>
 /* ===========================
