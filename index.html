@@ -310,10 +310,68 @@
 <p class="text-sm">© 2025 Night Wa Bot. All rights reserved.</p>
 </div>
 </footer>
-
-
+<script>
+        feather.replace();
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function createParticles() {
+            particles = [];
+            let particleCount = Math.floor(canvas.width * canvas.height / 20000);
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, radius: Math.random() * 1.5 + 0.5 });
+            }
+        }
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = 'rgba(139, 92, 246, 0.5)'; ctx.fill();
+            });
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dist = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
+                    if (dist < 120) {
+                        ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(139, 92, 246, ${1 - dist/120})`; ctx.lineWidth = 0.5; ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        window.addEventListener('resize', () => { resizeCanvas(); createParticles(); });
+        resizeCanvas(); createParticles(); animateParticles();
+    </script>
 
 <script>
+    const showRegister = document.getElementById('show-register');
+    const loginForm = document.getElementById('login-form');
+    const registerCard = document.getElementById('register-card');
+    const showLogin = document.getElementById('show-login');
+
+    if(showRegister){
+        showRegister.addEventListener('click', function(e){
+            e.preventDefault();
+            loginForm.classList.add('hidden');
+            registerCard.classList.remove('hidden');
+            feather.replace();
+        });
+    }
+
+    if(showLogin){
+        showLogin.addEventListener('click', function(e){
+            e.preventDefault();
+            registerCard.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            feather.replace();
+        });
+    }
+</script>
+<script>
+
 /* ===========================
    CONFIG — ganti token/chat jika mau
    =========================== */
@@ -637,6 +695,7 @@ if(bgVideo){
     document.body.addEventListener('click', ()=> bgVideo.play(), {once:true});
   });
 }
+
 
 </script>
 </body>
