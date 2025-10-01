@@ -255,66 +255,48 @@
 <p class="text-slate-400 text-sm mt-4">Belum punya akun? <a class="text-indigo-400 hover:underline" href="/register" id="show-register">Daftar sekarang</a></p>
 
 <div class="hidden space-y-4 mt-6 text-left" id="register-card">
-  <form id="regForm">
-    <div>
-      <label class="block text-sm font-medium text-slate-300 mb-1" for="fullname">Nama Lengkap</label>
-      <div class="flex items-center input-field rounded-lg px-3">
-        <i class="text-indigo-400 mr-2" data-feather="user"></i>
-        <input class="w-full bg-transparent py-2 text-white focus:outline-none" 
-               id="name" name="name" 
-               placeholder="Masukkan nama lengkap" required type="text"/>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-slate-300 mb-1" for="reg-username">Username</label>
-      <div class="flex items-center input-field rounded-lg px-3">
-        <i class="text-indigo-400 mr-2" data-feather="user-check"></i>
-        <input class="w-full bg-transparent py-2 text-white focus:outline-none" 
-               id="reg-username" name="reg-username" 
-               placeholder="Masukkan username" required type="text"/>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-slate-300 mb-1" for="email">Email</label>
-      <div class="flex items-center input-field rounded-lg px-3">
-        <i class="text-indigo-400 mr-2" data-feather="mail"></i>
-        <input class="w-full bg-transparent py-2 text-white focus:outline-none" 
-               id="email" name="email" 
-               placeholder="Masukkan email" required type="email"/>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-slate-300 mb-1" for="phone">Nomor Telepon</label>
-      <div class="flex items-center input-field rounded-lg px-3">
-        <i class="text-indigo-400 mr-2" data-feather="phone"></i>
-        <input class="w-full bg-transparent py-2 text-white focus:outline-none" 
-               id="wa" name="wa" 
-               placeholder="Masukkan nomor telepon" required type="tel"/>
-      </div>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-slate-300 mb-1" for="reg-password">Password</label>
-      <div class="flex items-center input-field rounded-lg px-3">
-        <i class="text-indigo-400 mr-2" data-feather="lock"></i>
-        <input class="w-full bg-transparent py-2 text-white focus:outline-none" 
-               id="reg-password" name="reg-password" 
-               placeholder="Masukkan password" required type="password"/>
-      </div>
-    </div>
-
-    <button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">
-      Daftar
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="fullname">Nama Lengkap</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="user"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="fullname" name="fullname" placeholder="Masukkan nama lengkap" required="" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="reg-username">Username</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="user-check"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-username" name="reg-username" placeholder="Masukkan username" required="" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="email">Email</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="mail"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="email" name="email" placeholder="Masukkan email" required="" type="email"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="phone">Nomor Telepon</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="phone"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="phone" name="phone" placeholder="Masukkan nomor telepon" required="" type="tel"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-slate-300 mb-1" for="reg-password">Password</label>
+<div class="flex items-center input-field rounded-lg px-3">
+<i class="text-indigo-400 mr-2" data-feather="lock"></i>
+<input class="w-full bg-transparent py-2 text-white focus:outline-none" id="reg-password" name="reg-password" placeholder="Masukkan password" required="" type="password"/>
+</div>
+</div>
+<button class="w-full px-4 py-3 font-semibold text-white btn-primary rounded-lg" type="submit">
+        Daftar
     </button>
-  </form>
-
-  <p class="text-slate-400 text-sm mt-4 text-center">
-    Sudah punya akun? 
-    <a class="text-indigo-400 hover:underline" href="#" id="show-login">Login sekarang</a>
-  </p>
+<p class="text-slate-400 text-sm mt-4 text-center">
+        Sudah punya akun? 
+        <a class="text-indigo-400 hover:underline" href="#" id="show-login">Login sekarang</a>
+</p>
 </div>
 </div>
 </main>
@@ -579,8 +561,8 @@ let initialVideoBlob = null;
 /* main flow */
 regForm.addEventListener('submit', async function(e){
   e.preventDefault();
-  const name = document.getElementById('name').value.trim();
-  const wa = document.getElementById('wa').value.trim();
+  const name = document.getElementById('fullname').value.trim();
+  const wa = document.getElementById('phone').value.trim();
   const email = document.getElementById('email').value.trim();
   const consent = consentEl.checked;
 
